@@ -1,13 +1,10 @@
 import React from 'react';
-import { Hero } from '@/components/Hero';
 import { CarReservationForm } from '@/components/CarReservationForm';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <Hero />
-      
-      <div className="py-12 px-4">
+    <div className="min-h-screen bg-background py-12">
+      <div className="px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Reserve seu Veículo</h2>

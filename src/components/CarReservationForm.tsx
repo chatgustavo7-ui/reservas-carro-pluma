@@ -4,19 +4,34 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Car, MapPin, Users, Clock } from 'lucide-react';
+import { CalendarIcon, Car, MapPin, Users, Clock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const cars = [
   { id: 'TMA3I25', name: 'TMA3I25', type: 'Executivo' },
   { id: 'TMB1H54', name: 'TMB1H54', type: 'Familiar' }
+];
+
+const people = [
+  'Eduardo S.',
+  'Francisco S.',
+  'Rejeane M.',
+  'Ariane A.',
+  'João C.',
+  'Paulo H.',
+  'Maycon A.',
+  'Martielo O.',
+  'Guilherme T.',
+  'Gustavo C.'
 ];
 
 const reservationSchema = z.object({
@@ -27,7 +42,8 @@ const reservationSchema = z.object({
     required_error: 'Data de entrega é obrigatória',
   }),
   destination: z.string().min(3, 'Destino deve ter pelo menos 3 caracteres'),
-  companions: z.string().min(1, 'Número de acompanhantes é obrigatório'),
+  driver: z.string().min(1, 'Condutor é obrigatório'),
+  companions: z.array(z.string()).optional(),
 }).refine((data) => data.returnDate >= data.pickupDate, {
   message: 'Data de entrega deve ser posterior à data de retirada',
   path: ['returnDate'],
@@ -51,9 +67,13 @@ const selectRandomCar = (availableCars: typeof cars) => {
 export const CarReservationForm = () => {
   const [selectedCar, setSelectedCar] = useState<typeof cars[0] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCompanions, setSelectedCompanions] = useState<string[]>([]);
 
   const form = useForm<ReservationForm>({
     resolver: zodResolver(reservationSchema),
+    defaultValues: {
+      companions: [],
+    },
   });
 
   const onSubmit = async (data: ReservationForm) => {
@@ -221,22 +241,66 @@ export const CarReservationForm = () => {
 
             <FormField
               control={form.control}
+              name="driver"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Condutor Principal
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o condutor" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {people.map((person) => (
+                        <SelectItem key={person} value={person}>
+                          {person}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="companions"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    Número de Acompanhantes
+                    Acompanhantes
                   </FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="0"
-                      placeholder="0" 
-                      {...field} 
-                      className="w-full"
-                    />
-                  </FormControl>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                    {people
+                      .filter((person) => person !== form.watch('driver'))
+                      .map((person) => (
+                        <div key={person} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={person}
+                            checked={selectedCompanions.includes(person)}
+                            onCheckedChange={(checked) => {
+                              let newCompanions;
+                              if (checked) {
+                                newCompanions = [...selectedCompanions, person];
+                              } else {
+                                newCompanions = selectedCompanions.filter(c => c !== person);
+                              }
+                              setSelectedCompanions(newCompanions);
+                              field.onChange(newCompanions);
+                            }}
+                          />
+                          <label htmlFor={person} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            {person}
+                          </label>
+                        </div>
+                      ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

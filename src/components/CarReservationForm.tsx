@@ -4,33 +4,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Car, MapPin, Users, Clock, User } from 'lucide-react';
+import { CalendarIcon, Car, MapPin, Users, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const cars = [
   { id: 'TMA3I25', name: 'TMA3I25', type: 'Executivo' },
   { id: 'TMB1H54', name: 'TMB1H54', type: 'Familiar' }
-];
-
-const people = [
-  'Eduardo S.',
-  'Francisco S.',
-  'Rejeane M.',
-  'Ariane A.',
-  'João C.',
-  'Paulo H.',
-  'Maycon A.',
-  'Martielo O.',
-  'Guilherme T.',
-  'Gustavo C.'
 ];
 
 const reservationSchema = z.object({
@@ -41,8 +27,7 @@ const reservationSchema = z.object({
     required_error: 'Data de entrega é obrigatória',
   }),
   destination: z.string().min(3, 'Destino deve ter pelo menos 3 caracteres'),
-  driver: z.string().min(1, 'Condutor é obrigatório'),
-  companions: z.array(z.string()).optional(),
+  companions: z.string().min(1, 'Número de acompanhantes é obrigatório'),
 }).refine((data) => data.returnDate >= data.pickupDate, {
   message: 'Data de entrega deve ser posterior à data de retirada',
   path: ['returnDate'],
@@ -236,82 +221,22 @@ export const CarReservationForm = () => {
 
             <FormField
               control={form.control}
-              name="driver"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Condutor Principal
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecionar condutor" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {people.map((person) => (
-                        <SelectItem key={person} value={person}>
-                          {person}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="companions"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    Acompanhantes
+                    Número de Acompanhantes
                   </FormLabel>
-                  <Select onValueChange={(value) => {
-                    const currentCompanions = field.value || [];
-                    if (!currentCompanions.includes(value)) {
-                      field.onChange([...currentCompanions, value]);
-                    }
-                  }}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Adicionar acompanhantes" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {people.map((person) => (
-                        <SelectItem key={person} value={person}>
-                          {person}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {field.value && field.value.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      <p className="text-sm text-muted-foreground">Acompanhantes selecionados:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {field.value.map((companion: string) => (
-                          <div key={companion} className="bg-muted px-2 py-1 rounded-md text-sm flex items-center gap-1">
-                            {companion}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = field.value?.filter((c: string) => c !== companion) || [];
-                                field.onChange(updated);
-                              }}
-                              className="ml-1 text-muted-foreground hover:text-foreground"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="0"
+                      placeholder="0" 
+                      {...field} 
+                      className="w-full"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

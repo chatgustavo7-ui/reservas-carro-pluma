@@ -17,8 +17,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 210 95% 48%;
+    --primary-foreground: 0 0% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -26,7 +26,7 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 39 100% 65%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -34,7 +34,17 @@ All colors MUST be HSL.
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 210 95% 48%;
+
+    /* Custom travel theme colors */
+    --travel-blue: 210 95% 48%;
+    --travel-blue-light: 210 95% 85%;
+    --travel-orange: 39 100% 65%;
+    --travel-orange-light: 39 100% 85%;
+    --gradient-hero: linear-gradient(135deg, hsl(var(--travel-blue)), hsl(var(--travel-orange)));
+    --gradient-card: linear-gradient(135deg, hsl(var(--travel-blue) / 0.05), hsl(var(--travel-orange) / 0.05));
+    --shadow-travel: 0 10px 30px -10px hsl(var(--travel-blue) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--travel-orange) / 0.4);
 
     --radius: 0.5rem;
 

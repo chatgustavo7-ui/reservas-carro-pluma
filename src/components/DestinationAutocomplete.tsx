@@ -99,22 +99,21 @@ export const DestinationAutocomplete: React.FC<DestinationAutocompleteProps> = (
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className={cn('w-full', className)}>
-          <Input
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            placeholder={placeholder}
-            aria-autocomplete="list"
-            aria-expanded={open}
-          />
-        </div>
+        <Input
+          ref={inputRef}
+          className={cn('w-full', className)}
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+          aria-autocomplete="list"
+          aria-expanded={open}
+        />
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
+      <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="z-50 p-0 w-[var(--radix-popover-trigger-width)]">
         <Command shouldFilter={false}>
           <CommandInput
             value={inputValue}

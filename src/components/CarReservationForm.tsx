@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { MultiDestinationField } from '@/components/MultiDestinationField';
 
 const cars = [
   { id: 'TMA3I25', name: 'TMA3I25', type: 'Executivo' },
@@ -41,7 +42,9 @@ const reservationSchema = z.object({
   returnDate: z.date({
     required_error: 'Data de entrega é obrigatória',
   }),
-  destination: z.string().min(3, 'Destino deve ter pelo menos 3 caracteres'),
+  destinations: z
+    .array(z.string().min(3, 'Destino deve ter pelo menos 3 caracteres'))
+    .min(1, 'Informe ao menos um destino'),
   driver: z.string().min(1, 'Condutor é obrigatório'),
   companions: z.array(z.string()).optional(),
 }).refine((data) => data.returnDate >= data.pickupDate, {
@@ -68,12 +71,13 @@ export const CarReservationForm = () => {
   const [selectedCar, setSelectedCar] = useState<typeof cars[0] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<ReservationForm>({
-    resolver: zodResolver(reservationSchema),
-    defaultValues: {
-      companions: [],
-    },
-  });
+const form = useForm<ReservationForm>({
+  resolver: zodResolver(reservationSchema),
+  defaultValues: {
+    companions: [],
+    destinations: [''],
+  },
+});
 
   const watchedDriver = form.watch('driver');
   const availableCompanions = people.filter(person => person !== watchedDriver);
@@ -220,26 +224,22 @@ export const CarReservationForm = () => {
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="destination"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Destino da Viagem
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: São Paulo, SP" 
-                      {...field} 
-                      className="w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+<FormField
+  control={form.control}
+  name="destinations"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel className="flex items-center gap-2">
+        <MapPin className="h-4 w-4" />
+        Destino(s) da Viagem
+      </FormLabel>
+      <FormControl>
+        <MultiDestinationField value={field.value || ['']} onChange={field.onChange} />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
             <FormField
               control={form.control}

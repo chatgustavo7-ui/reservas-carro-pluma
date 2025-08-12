@@ -135,8 +135,8 @@ export const DestinationAutocomplete: React.FC<DestinationAutocompleteProps> = (
                         onChange(c.label);
                         setInputValue(c.label);
                         setOpen(false);
-                        // Return focus to input for accessibility
-                        requestAnimationFrame(() => inputRef.current?.focus());
+                        // Remove refocus to avoid reopening popover via onFocus handler
+                        // inputRef.current?.blur();
                       }}
                     >
                       {c.label}

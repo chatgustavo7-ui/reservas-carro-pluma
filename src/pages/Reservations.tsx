@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,7 @@ import { DestinationAutocomplete } from '@/components/DestinationAutocomplete';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { ArrowLeft } from 'lucide-react';
 
 const useReservations = (filters: {
   driver: string;
@@ -92,6 +94,13 @@ const Reservations: React.FC = () => {
     <main className="min-h-screen bg-background py-12">
       <section className="px-4">
         <div className="max-w-6xl mx-auto">
+          <div className="mb-4">
+            <Button asChild variant="outline">
+              <Link to="/" aria-label="Voltar para o menu principal">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+              </Link>
+            </Button>
+          </div>
           <header className="mb-8 text-center">
             <h1 className="text-3xl font-bold mb-2">Reservas</h1>
             <p className="text-muted-foreground">Visualize todas as reservas e aplique filtros por condutor, carro, datas e destino.</p>

@@ -5,7 +5,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
@@ -108,18 +107,17 @@ export const DestinationAutocomplete: React.FC<DestinationAutocompleteProps> = (
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setOpen(false);
+            if (e.key === 'ArrowDown') setOpen(true);
+          }}
           placeholder={placeholder}
           aria-autocomplete="list"
           aria-expanded={open}
         />
       </PopoverTrigger>
-      <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="z-50 p-0 w-[var(--radix-popover-trigger-width)]">
+      <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="z-50 p-0 w-[var(--radix-popover-trigger-width)] max-h-72 overflow-auto">
         <Command shouldFilter={false}>
-          <CommandInput
-            value={inputValue}
-            onValueChange={(v) => setInputValue(v)}
-            placeholder="Buscar cidade..."
-          />
           <CommandList>
             {loading ? (
               <div className="p-3 text-sm text-muted-foreground">Carregando...</div>

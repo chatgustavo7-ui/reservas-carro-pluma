@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MultiDestinationField } from '@/components/MultiDestinationField';
+import { supabase } from '@/integrations/supabase/client';
 
 const cars = [
   { id: 'TMA3I25', name: 'TMA3I25', type: 'Executivo' },
@@ -84,10 +85,10 @@ const form = useForm<ReservationForm>({
 
   const onSubmit = async (data: ReservationForm) => {
     setIsSubmitting(true);
-    
+
     try {
       const availableCars = getAvailableCars(data.pickupDate, data.returnDate);
-      
+
       if (availableCars.length === 0) {
         toast({
           title: 'Não há carros disponíveis',
@@ -100,22 +101,34 @@ const form = useForm<ReservationForm>({
       const randomCar = selectRandomCar(availableCars);
       setSelectedCar(randomCar);
 
+      // Persistir no Supabase
+      const cleanDestinations = Array.from(
+        new Set((data.destinations || []).map((d) => (d || '').trim()).filter(Boolean))
+      );
+
+      const { error } = await (supabase as any).from('reservations').insert({
+        driver_name: data.driver,
+        companions: data.companions || [],
+        car: randomCar?.name || randomCar?.id || 'Desconhecido',
+        pickup_date: data.pickupDate.toISOString().slice(0, 10),
+        return_date: data.returnDate.toISOString().slice(0, 10),
+        destinations: cleanDestinations,
+        // status será definido via default/trigger
+      });
+
+      if (error) throw error;
+
       toast({
         title: 'Reserva confirmada!',
-        description: `Carro ${randomCar?.name} foi reservado para sua viagem.`,
+        description: `Carro ${randomCar?.name} foi reservado e salvo com sucesso.`,
       });
 
-      // Simular envio para backend
-      console.log('Reserva criada:', {
-        ...data,
-        carId: randomCar?.id,
-        carName: randomCar?.name,
-      });
-
+      // Opcional: resetar formulário
+      // form.reset({ companions: [], destinations: [''] });
     } catch (error) {
       toast({
         title: 'Erro na reserva',
-        description: 'Ocorreu um erro ao processar sua reserva. Tente novamente.',
+        description: 'Ocorreu um erro ao salvar sua reserva. Tente novamente.',
         variant: 'destructive',
       });
     } finally {

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { CarReservationForm } from '@/components/CarReservationForm';
 const Index = () => {
   return <div className="min-h-screen bg-background py-12">
@@ -10,6 +12,11 @@ const Index = () => {
               Preencha os dados abaixo e nosso sistema selecionará automaticamente 
               o melhor veículo disponível para sua viagem.
             </p>
+            <div className="mt-4">
+              <Button asChild>
+                <Link to="/reservas" aria-label="Ver todas as reservas">Ver reservas</Link>
+              </Button>
+            </div>
           </div>
           
           <CarReservationForm />

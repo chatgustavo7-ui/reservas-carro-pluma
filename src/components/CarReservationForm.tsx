@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Car, MapPin, Users, Clock, UserIcon } from 'lucide-react';
+import { normalizeToLocalNoon, formatToLocalDateString, getTodayLocal, isDateFromToday } from '@/utils/dateUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,15 +20,15 @@ import { MultiDestinationField } from '@/components/MultiDestinationField';
 import { supabase } from '@/integrations/supabase/client';
 
 const cars = [
-  { id: 'TMA3I25', name: 'TMA3I25', type: 'Executivo' },
-  { id: 'TMB1H54', name: 'TMB1H54', type: 'Familiar' }
+  { id: 'TMA3I25', name: 'TMA3I25', type: 'T-Cross' },
+  { id: 'TMB1H54', name: 'TMB1H54', type: 'T-Cross' }
 ];
 
 const people = [
-  'Eduarda S.',
+  'Eduardo S.',
   'Francisco S.',
   'Rejeane M.',
-  'Ariane A.',
+  'Ayeska A.',
   'Joao C.',
   'Paulo H.',
   'Maycon A.',
@@ -39,6 +40,8 @@ const people = [
 const reservationSchema = z.object({
   pickupDate: z.date({
     required_error: 'Data de retirada é obrigatória',
+  }).refine((date) => isDateFromToday(date), {
+    message: 'Data de retirada deve ser hoje ou posterior',
   }),
   returnDate: z.date({
     required_error: 'Data de entrega é obrigatória',
@@ -49,17 +52,36 @@ const reservationSchema = z.object({
   driver: z.string().min(1, 'Condutor é obrigatório'),
   companions: z.array(z.string()).optional(),
 }).refine((data) => data.returnDate >= data.pickupDate, {
-  message: 'Data de entrega deve ser posterior à data de retirada',
+  message: 'Data de entrega deve ser igual ou posterior à data de retirada',
   path: ['returnDate'],
 });
 
 type ReservationForm = z.infer<typeof reservationSchema>;
 
-const getAvailableCars = (pickupDate: Date, returnDate: Date) => {
-  // Simulação de disponibilidade - em um sistema real seria uma API
-  const isWeekend = pickupDate.getDay() === 0 || pickupDate.getDay() === 6;
-  const availableCars = isWeekend ? cars : cars.filter(car => car.id === 'TMA3I25');
-  return availableCars;
+const getAvailableCars = async (pickupDate: Date, returnDate: Date) => {
+  const pickupStr = formatToLocalDateString(pickupDate);
+  const returnStr = formatToLocalDateString(returnDate);
+  
+  try {
+    // Buscar reservas que se sobrepõem com o período solicitado
+    // Sobreposição inclusiva: pickup_nova <= return_existente AND return_nova >= pickup_existente
+    const { data: overlappingReservations, error } = await (supabase as any)
+      .from('reservations')
+      .select('car')
+      .lte('pickup_date', returnStr)
+      .gte('return_date', pickupStr)
+      .neq('status', 'cancelada');
+      
+    if (error) throw error;
+    
+    const occupiedCars = new Set(overlappingReservations.map((r: any) => r.car));
+    const availableCars = cars.filter(car => !occupiedCars.has(car.id));
+    
+    return availableCars;
+  } catch (error) {
+    console.error('Erro ao verificar disponibilidade:', error);
+    return [];
+  }
 };
 
 const selectRandomCar = (availableCars: typeof cars) => {
@@ -87,12 +109,12 @@ const form = useForm<ReservationForm>({
     setIsSubmitting(true);
 
     try {
-      const availableCars = getAvailableCars(data.pickupDate, data.returnDate);
+      const availableCars = await getAvailableCars(data.pickupDate, data.returnDate);
 
       if (availableCars.length === 0) {
         toast({
           title: 'Não há carros disponíveis',
-          description: 'Não encontramos carros disponíveis para as datas selecionadas.',
+          description: 'Não há carros disponíveis para as datas selecionadas.',
           variant: 'destructive',
         });
         return;
@@ -109,9 +131,9 @@ const form = useForm<ReservationForm>({
       const { error } = await (supabase as any).from('reservations').insert({
         driver_name: data.driver,
         companions: data.companions || [],
-        car: randomCar?.name || randomCar?.id || 'Desconhecido',
-        pickup_date: data.pickupDate.toISOString().slice(0, 10),
-        return_date: data.returnDate.toISOString().slice(0, 10),
+        car: randomCar?.id || 'Desconhecido',
+        pickup_date: formatToLocalDateString(data.pickupDate),
+        return_date: formatToLocalDateString(data.returnDate),
         destinations: cleanDestinations,
         // status será definido via default/trigger
       });
@@ -120,7 +142,7 @@ const form = useForm<ReservationForm>({
 
       toast({
         title: 'Reserva confirmada!',
-        description: `Carro ${randomCar?.name} foi reservado e salvo com sucesso.`,
+        description: `Carro ${randomCar?.id} foi reservado e salvo com sucesso.`,
       });
 
       // Opcional: resetar formulário
@@ -181,7 +203,7 @@ const form = useForm<ReservationForm>({
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => !isDateFromToday(date)}
                           initialFocus
                           className={cn("p-3 pointer-events-auto")}
                         />
@@ -225,7 +247,7 @@ const form = useForm<ReservationForm>({
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => !isDateFromToday(date)}
                           initialFocus
                           className={cn("p-3 pointer-events-auto")}
                         />
@@ -334,8 +356,8 @@ const form = useForm<ReservationForm>({
           <div className="mt-6 p-4 bg-gradient-to-r from-travel-blue-light to-travel-orange-light rounded-lg">
             <h3 className="font-semibold text-lg mb-2">Reserva Confirmada!</h3>
             <div className="space-y-1 text-sm">
-              <p><strong>Veículo:</strong> {selectedCar.name}</p>
-              <p><strong>Tipo:</strong> {selectedCar.type}</p>
+              <p><strong>Placa:</strong> {selectedCar.id}</p>
+              <p><strong>Modelo:</strong> {selectedCar.type}</p>
               <p className="text-muted-foreground mt-2">
                 Seu veículo foi selecionado automaticamente entre os disponíveis.
               </p>

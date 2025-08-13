@@ -4,11 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DestinationAutocomplete } from '@/components/DestinationAutocomplete';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const useReservations = (filters: {
   driver: string;
@@ -64,7 +66,33 @@ const Reservations: React.FC = () => {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 
+  const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useReservations({ driver, car, destination, start, end });
+
+  const handleCancelReservation = async (id: string) => {
+    try {
+      const { error } = await (supabase as any)
+        .from('reservations')
+        .update({ status: 'cancelada' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Reserva cancelada',
+        description: 'A reserva foi cancelada com sucesso.',
+      });
+
+      // Invalidar queries para atualizar a lista
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    } catch (error) {
+      toast({
+        title: 'Erro ao cancelar',
+        description: 'Ocorreu um erro ao cancelar a reserva. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     document.title = 'Reservas | Visualizar e Filtrar';
@@ -142,6 +170,7 @@ const Reservations: React.FC = () => {
                       <TableHead>Devolução</TableHead>
                       <TableHead>Destinos</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -161,11 +190,37 @@ const Reservations: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell><StatusBadge status={r.status} /></TableCell>
+                          <TableCell>
+                            {r.status === 'ativa' && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Cancelar
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Não</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleCancelReservation(r.id)}>
+                                      Sim, cancelar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground">
                           Nenhuma reserva encontrada.
                         </TableCell>
                       </TableRow>

@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
@@ -63,7 +62,9 @@ export const DestinationAutocomplete: React.FC<DestinationAutocompleteProps> = (
   const [open, setOpen] = useState(false);
   const [cities, setCities] = useState<City[]>(citiesCache || []);
   const [loading, setLoading] = useState<boolean>(!citiesCache);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -88,13 +89,42 @@ export const DestinationAutocomplete: React.FC<DestinationAutocompleteProps> = (
     setInputValue(value || '');
   }, [value]);
 
+  // Debounce para busca
+  const debouncedSearch = useCallback((query: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setSearchQuery(query);
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    debouncedSearch(inputValue);
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [inputValue, debouncedSearch]);
+
   const filtered = useMemo(() => {
-    const q = normalize(inputValue);
-    if (!q) return cities.slice(0, 20);
+    if (searchQuery.length < 3) return [];
+    const q = normalize(searchQuery);
     return cities
       .filter((c) => normalize(c.label).includes(q))
       .slice(0, 20);
-  }, [cities, inputValue]);
+  }, [cities, searchQuery]);
+
+  // Handlers para teclado
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setOpen(false);
+      inputRef.current?.blur();
+    } else if (e.key === 'ArrowDown' && !open) {
+      setOpen(true);
+    }
+  }, [open]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -105,49 +135,61 @@ export const DestinationAutocomplete: React.FC<DestinationAutocompleteProps> = (
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
-            setOpen(true);
+            if (e.target.value.length >= 3) {
+              setOpen(true);
+            }
           }}
-          onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            if (inputValue.length >= 3) {
+              setOpen(true);
+            }
+          }}
           placeholder={placeholder}
           aria-autocomplete="list"
           aria-expanded={open}
         />
       </PopoverTrigger>
-      <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="z-50 p-0 w-[var(--radix-popover-trigger-width)]">
-        <Command shouldFilter={false}>
-          <CommandInput
-            value={inputValue}
-            onValueChange={(v) => setInputValue(v)}
-            placeholder="Buscar cidade..."
-          />
-          <CommandList>
-            {loading ? (
-              <div className="p-3 text-sm text-muted-foreground">Carregando...</div>
-            ) : (
-              <>
-                <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
-                <CommandGroup heading="Cidades">
-                  {filtered.map((c) => (
-                    <CommandItem
-                      key={c.label}
-                      value={c.label}
-                      onSelect={() => {
-                        onChange(c.label);
-                        setInputValue(c.label);
-                        setOpen(false);
-                        // Remove refocus to avoid reopening popover via onFocus handler
-                        // inputRef.current?.blur();
-                      }}
-                    >
-                      {c.label}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
+      {open && (
+        <PopoverContent 
+          onOpenAutoFocus={(e) => e.preventDefault()} 
+          className="z-50 p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-y-auto"
+          onInteractOutside={() => setOpen(false)}
+        >
+          <Command shouldFilter={false}>
+            <CommandList>
+              {loading ? (
+                <div className="p-3 text-sm text-muted-foreground">Carregando...</div>
+              ) : (
+                <>
+                  {searchQuery.length < 3 ? (
+                    <div className="p-3 text-sm text-muted-foreground">Digite pelo menos 3 letras...</div>
+                  ) : filtered.length === 0 ? (
+                    <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                  ) : (
+                    <CommandGroup>
+                      {filtered.map((c) => (
+                        <CommandItem
+                          key={c.label}
+                          value={c.label}
+                          onSelect={() => {
+                            onChange(c.label);
+                            setInputValue(c.label);
+                            setOpen(false);
+                            inputRef.current?.blur();
+                          }}
+                        >
+                          {c.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      )}
     </Popover>
   );
 };

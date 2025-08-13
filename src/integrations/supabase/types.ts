@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      reservations: {
+        Row: {
+          car: string
+          companions: string[]
+          created_at: string
+          destinations: string[]
+          driver_name: string
+          id: string
+          pickup_date: string
+          return_date: string
+          status: string
+        }
+        Insert: {
+          car: string
+          companions?: string[]
+          created_at?: string
+          destinations?: string[]
+          driver_name: string
+          id?: string
+          pickup_date: string
+          return_date: string
+          status?: string
+        }
+        Update: {
+          car?: string
+          companions?: string[]
+          created_at?: string
+          destinations?: string[]
+          driver_name?: string
+          id?: string
+          pickup_date?: string
+          return_date?: string
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

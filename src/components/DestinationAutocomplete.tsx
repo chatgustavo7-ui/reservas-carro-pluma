@@ -127,69 +127,65 @@ export const DestinationAutocomplete: React.FC<DestinationAutocompleteProps> = (
   }, [open]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Input
-          ref={inputRef}
-          className={cn('w-full', className)}
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            if (e.target.value.length >= 3) {
-              setOpen(true);
-            }
-          }}
-          onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (inputValue.length >= 3) {
-              setOpen(true);
-            }
-          }}
-          placeholder={placeholder}
-          aria-autocomplete="list"
-          aria-expanded={open}
-        />
-      </PopoverTrigger>
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        className={cn('w-full', className)}
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          if (e.target.value.length >= 3) {
+            setOpen(true);
+          } else {
+            setOpen(false);
+          }
+        }}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          if (inputValue.length >= 3) {
+            setOpen(true);
+          }
+        }}
+        onBlur={() => {
+          // Pequeno delay para permitir clique nas opções
+          setTimeout(() => setOpen(false), 200);
+        }}
+        placeholder={placeholder}
+        aria-autocomplete="list"
+        aria-expanded={open}
+      />
       {open && (
-        <PopoverContent 
-          onOpenAutoFocus={(e) => e.preventDefault()} 
-          className="z-50 p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-y-auto"
-          onInteractOutside={() => setOpen(false)}
-        >
-          <Command shouldFilter={false}>
-            <CommandList>
-              {loading ? (
-                <div className="p-3 text-sm text-muted-foreground">Carregando...</div>
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-md shadow-md max-h-[300px] overflow-y-auto">
+          {loading ? (
+            <div className="p-3 text-sm text-muted-foreground">Carregando...</div>
+          ) : (
+            <>
+              {searchQuery.length < 3 ? (
+                <div className="p-3 text-sm text-muted-foreground">Digite pelo menos 3 letras...</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-3 text-sm text-muted-foreground">Nenhuma cidade encontrada.</div>
               ) : (
-                <>
-                  {searchQuery.length < 3 ? (
-                    <div className="p-3 text-sm text-muted-foreground">Digite pelo menos 3 letras...</div>
-                  ) : filtered.length === 0 ? (
-                    <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
-                  ) : (
-                    <CommandGroup>
-                      {filtered.map((c) => (
-                        <CommandItem
-                          key={c.label}
-                          value={c.label}
-                          onSelect={() => {
-                            onChange(c.label);
-                            setInputValue(c.label);
-                            setOpen(false);
-                            inputRef.current?.blur();
-                          }}
-                        >
-                          {c.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
-                </>
+                <div className="p-2">
+                  {filtered.map((c) => (
+                    <div
+                      key={c.label}
+                      className="px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-sm text-sm"
+                      onClick={() => {
+                        onChange(c.label);
+                        setInputValue(c.label);
+                        setOpen(false);
+                        inputRef.current?.blur();
+                      }}
+                    >
+                      {c.label}
+                    </div>
+                  ))}
+                </div>
               )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
+            </>
+          )}
+        </div>
       )}
-    </Popover>
+    </div>
   );
 };

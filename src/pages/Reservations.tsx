@@ -94,6 +94,31 @@ const Reservations: React.FC = () => {
     }
   };
 
+  const handleRemoveReservation = async (id: string) => {
+    try {
+      const { error } = await (supabase as any)
+        .from('reservations')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Reserva removida',
+        description: 'A reserva foi removida permanentemente.',
+      });
+
+      // Invalidar queries para atualizar a lista
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    } catch (error) {
+      toast({
+        title: 'Erro ao remover',
+        description: 'Não foi possível remover a reserva. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
     document.title = 'Reservas | Visualizar e Filtrar';
     const meta = document.querySelector('meta[name="description"]') || document.createElement('meta');
@@ -180,8 +205,8 @@ const Reservations: React.FC = () => {
                           <TableCell>{r.driver_name}</TableCell>
                           <TableCell>{(r.companions || []).join(', ') || '-'}</TableCell>
                           <TableCell>{r.car}</TableCell>
-                          <TableCell>{r.pickup_date ? format(new Date(r.pickup_date), 'dd/MM/yyyy') : '-'}</TableCell>
-                          <TableCell>{r.return_date ? format(new Date(r.return_date), 'dd/MM/yyyy') : '-'}</TableCell>
+                           <TableCell>{r.pickup_date || '-'}</TableCell>
+                           <TableCell>{r.return_date || '-'}</TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
                               {(r.destinations || []).map((d, i) => (
@@ -190,32 +215,56 @@ const Reservations: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell><StatusBadge status={r.status} /></TableCell>
-                          <TableCell>
-                            {r.status === 'ativa' && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    Cancelar
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Não</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleCancelReservation(r.id)}>
-                                      Sim, cancelar
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
-                          </TableCell>
+                           <TableCell>
+                             <div className="flex gap-2">
+                               {r.status === 'ativa' && (
+                                 <AlertDialog>
+                                   <AlertDialogTrigger asChild>
+                                     <Button variant="outline" size="sm">
+                                       <Trash2 className="h-4 w-4 mr-1" />
+                                       Cancelar
+                                     </Button>
+                                   </AlertDialogTrigger>
+                                   <AlertDialogContent>
+                                     <AlertDialogHeader>
+                                       <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
+                                       <AlertDialogDescription>
+                                         Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
+                                       </AlertDialogDescription>
+                                     </AlertDialogHeader>
+                                     <AlertDialogFooter>
+                                       <AlertDialogCancel>Não</AlertDialogCancel>
+                                       <AlertDialogAction onClick={() => handleCancelReservation(r.id)}>
+                                         Sim, cancelar
+                                       </AlertDialogAction>
+                                     </AlertDialogFooter>
+                                   </AlertDialogContent>
+                                 </AlertDialog>
+                               )}
+                               <AlertDialog>
+                                 <AlertDialogTrigger asChild>
+                                   <Button variant="destructive" size="sm">
+                                     <Trash2 className="h-4 w-4 mr-1" />
+                                     Remover
+                                   </Button>
+                                 </AlertDialogTrigger>
+                                 <AlertDialogContent>
+                                   <AlertDialogHeader>
+                                     <AlertDialogTitle>Remover Reserva</AlertDialogTitle>
+                                     <AlertDialogDescription>
+                                       Remover esta reserva? Esta ação é permanente e não pode ser desfeita.
+                                     </AlertDialogDescription>
+                                   </AlertDialogHeader>
+                                   <AlertDialogFooter>
+                                     <AlertDialogCancel>Não</AlertDialogCancel>
+                                     <AlertDialogAction onClick={() => handleRemoveReservation(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                       Sim, remover
+                                     </AlertDialogAction>
+                                   </AlertDialogFooter>
+                                 </AlertDialogContent>
+                               </AlertDialog>
+                             </div>
+                           </TableCell>
                         </TableRow>
                       ))
                     ) : (

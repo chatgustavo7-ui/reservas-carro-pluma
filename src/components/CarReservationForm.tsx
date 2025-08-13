@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Car, MapPin, Users, Clock, UserIcon } from 'lucide-react';
-import { normalizeToLocalNoon, formatToLocalDateString, getTodayLocal, isDateFromToday } from '@/utils/dateUtils';
+import { dateToLocalString, isDateFromToday } from '@/utils/dateUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
@@ -59,8 +59,8 @@ const reservationSchema = z.object({
 type ReservationForm = z.infer<typeof reservationSchema>;
 
 const getAvailableCars = async (pickupDate: Date, returnDate: Date) => {
-  const pickupStr = formatToLocalDateString(pickupDate);
-  const returnStr = formatToLocalDateString(returnDate);
+  const pickupStr = dateToLocalString(pickupDate);
+  const returnStr = dateToLocalString(returnDate);
   
   try {
     // Buscar reservas que se sobrepõem com o período solicitado
@@ -132,8 +132,8 @@ const form = useForm<ReservationForm>({
         driver_name: data.driver,
         companions: data.companions || [],
         car: randomCar?.id || 'Desconhecido',
-        pickup_date: formatToLocalDateString(data.pickupDate),
-        return_date: formatToLocalDateString(data.returnDate),
+        pickup_date: dateToLocalString(data.pickupDate),
+        return_date: dateToLocalString(data.returnDate),
         destinations: cleanDestinations,
         // status será definido via default/trigger
       });

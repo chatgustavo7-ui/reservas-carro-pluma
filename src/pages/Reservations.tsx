@@ -9,8 +9,9 @@ import { DestinationAutocomplete } from '@/components/DestinationAutocomplete';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { todayISO, formatDateBR } from '@/utils/kmUtils';
 
 const useReservations = (filters: {
   driver: string;
@@ -49,6 +50,9 @@ const useReservations = (filters: {
         destinations: string[];
         status: 'ativa' | 'concluída' | 'cancelada';
         created_at: string;
+        driver_email?: string;
+        odometer_start_km?: number;
+        odometer_end_km?: number;
       }>;
     },
   });
@@ -57,6 +61,27 @@ const useReservations = (filters: {
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const variant = status === 'ativa' ? 'default' : status === 'concluída' ? 'secondary' : 'destructive';
   return <Badge variant={variant as any}>{status}</Badge>;
+};
+
+const KmStatusBadge: React.FC<{ reservation: any }> = ({ reservation }) => {
+  const today = todayISO();
+  const isPastDue = reservation.return_date < today;
+  const hasEndKm = reservation.odometer_end_km !== null && reservation.odometer_end_km !== undefined;
+  
+  if (isPastDue && !hasEndKm) {
+    return (
+      <Badge variant="destructive" className="flex items-center gap-1">
+        <AlertTriangle className="h-3 w-3" />
+        KM pendente
+      </Badge>
+    );
+  }
+  
+  if (hasEndKm) {
+    return <Badge variant="secondary">KM informado</Badge>;
+  }
+  
+  return null;
 };
 
 const Reservations: React.FC = () => {
@@ -185,36 +210,59 @@ const Reservations: React.FC = () => {
 
             {!isLoading && !error && (
               <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Condutor</TableHead>
-                      <TableHead>Acompanhantes</TableHead>
-                      <TableHead>Carro</TableHead>
-                      <TableHead>Retirada</TableHead>
-                      <TableHead>Devolução</TableHead>
-                      <TableHead>Destinos</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <Table>
+                   <TableHeader>
+                     <TableRow>
+                       <TableHead>Condutor</TableHead>
+                       <TableHead>Carro</TableHead>
+                       <TableHead>Retirada</TableHead>
+                       <TableHead>Devolução</TableHead>
+                       <TableHead>KM</TableHead>
+                       <TableHead>Destinos</TableHead>
+                       <TableHead>Status</TableHead>
+                       <TableHead>Ações</TableHead>
+                     </TableRow>
+                   </TableHeader>
                   <TableBody>
                     {data && data.length > 0 ? (
-                      data.map((r) => (
-                        <TableRow key={r.id}>
-                          <TableCell>{r.driver_name}</TableCell>
-                          <TableCell>{(r.companions || []).join(', ') || '-'}</TableCell>
-                          <TableCell>{r.car}</TableCell>
-                           <TableCell>{r.pickup_date || '-'}</TableCell>
-                           <TableCell>{r.return_date || '-'}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {(r.destinations || []).map((d, i) => (
-                                <Badge key={`${r.id}-${i}`} variant="secondary">{d}</Badge>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell><StatusBadge status={r.status} /></TableCell>
+                       data.map((r) => (
+                         <TableRow key={r.id}>
+                           <TableCell>
+                             <div>
+                               <div className="font-medium">{r.driver_name}</div>
+                               {r.companions && r.companions.length > 0 && (
+                                 <div className="text-sm text-muted-foreground">
+                                   +{r.companions.length} acompanhante{r.companions.length > 1 ? 's' : ''}
+                                 </div>
+                               )}
+                             </div>
+                           </TableCell>
+                           <TableCell>{r.car}</TableCell>
+                           <TableCell>{formatDateBR(r.pickup_date) || '-'}</TableCell>
+                           <TableCell>{formatDateBR(r.return_date) || '-'}</TableCell>
+                           <TableCell>
+                             <div className="space-y-1">
+                               {r.odometer_start_km && (
+                                 <div className="text-xs text-muted-foreground">
+                                   Inicial: {r.odometer_start_km.toLocaleString()}
+                                 </div>
+                               )}
+                               {r.odometer_end_km && (
+                                 <div className="text-xs">
+                                   Final: {r.odometer_end_km.toLocaleString()}
+                                 </div>
+                               )}
+                               <KmStatusBadge reservation={r} />
+                             </div>
+                           </TableCell>
+                           <TableCell>
+                             <div className="flex flex-wrap gap-1">
+                               {(r.destinations || []).map((d, i) => (
+                                 <Badge key={`${r.id}-${i}`} variant="secondary">{d}</Badge>
+                               ))}
+                             </div>
+                           </TableCell>
+                           <TableCell><StatusBadge status={r.status} /></TableCell>
                            <TableCell>
                              <div className="flex gap-2">
                                {r.status === 'ativa' && (
@@ -267,13 +315,13 @@ const Reservations: React.FC = () => {
                            </TableCell>
                         </TableRow>
                       ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground">
-                          Nenhuma reserva encontrada.
-                        </TableCell>
-                      </TableRow>
-                    )}
+                     ) : (
+                       <TableRow>
+                         <TableCell colSpan={8} className="text-center text-muted-foreground">
+                           Nenhuma reserva encontrada.
+                         </TableCell>
+                       </TableRow>
+                     )}
                   </TableBody>
                 </Table>
               </div>

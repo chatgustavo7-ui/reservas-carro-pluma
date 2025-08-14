@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Car, MapPin, Users, Clock, UserIcon } from 'lucide-react';
+import { CalendarIcon, Car, MapPin, Users, Clock, UserIcon, AlertTriangle } from 'lucide-react';
 import { dateToLocalString, isDateFromToday } from '@/utils/dateUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MultiDestinationField } from '@/components/MultiDestinationField';
 import { supabase } from '@/integrations/supabase/client';
+import { hasPendingKm, sendReservationConfirmation } from '@/utils/kmUtils';
 
 const cars = [
   { id: 'TMA3I25', name: 'TMA3I25', type: 'T-Cross' },
@@ -51,6 +52,8 @@ const reservationSchema = z.object({
     .min(1, 'Informe ao menos um destino'),
   driver: z.string().min(1, 'Condutor é obrigatório'),
   companions: z.array(z.string()).optional(),
+  driverEmail: z.string().email('Email inválido').optional().or(z.literal('')),
+  odometerStartKm: z.number().min(0, 'KM deve ser um número positivo').optional(),
 }).refine((data) => data.returnDate >= data.pickupDate, {
   message: 'Data de entrega deve ser igual ou posterior à data de retirada',
   path: ['returnDate'],
@@ -93,17 +96,53 @@ const selectRandomCar = (availableCars: typeof cars) => {
 export const CarReservationForm = () => {
   const [selectedCar, setSelectedCar] = useState<typeof cars[0] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingKmWarning, setPendingKmWarning] = useState<string>('');
 
 const form = useForm<ReservationForm>({
   resolver: zodResolver(reservationSchema),
   defaultValues: {
     companions: [],
     destinations: [''],
+    driverEmail: '',
   },
 });
 
   const watchedDriver = form.watch('driver');
   const availableCompanions = people.filter(person => person !== watchedDriver);
+
+  // Verificar pendências quando o condutor for selecionado
+  React.useEffect(() => {
+    const checkDriverPendencies = async () => {
+      if (!watchedDriver) {
+        setPendingKmWarning('');
+        return;
+      }
+
+      try {
+        const hasPending = await hasPendingKm(watchedDriver);
+        if (hasPending) {
+          setPendingKmWarning('Há KM pendente. Você pode reservar mesmo assim; lembre-se de regularizar.');
+        } else {
+          setPendingKmWarning('');
+        }
+
+        // Buscar email do condutor
+        const { data: driverData } = await supabase
+          .from('drivers')
+          .select('email')
+          .eq('name', watchedDriver)
+          .maybeSingle();
+
+        if (driverData?.email) {
+          form.setValue('driverEmail', driverData.email);
+        }
+      } catch (error) {
+        console.error('Error checking driver pendencies:', error);
+      }
+    };
+
+    checkDriverPendencies();
+  }, [watchedDriver, form]);
 
   const onSubmit = async (data: ReservationForm) => {
     setIsSubmitting(true);
@@ -128,17 +167,35 @@ const form = useForm<ReservationForm>({
         new Set((data.destinations || []).map((d) => (d || '').trim()).filter(Boolean))
       );
 
-      const { error } = await (supabase as any).from('reservations').insert({
+      const reservationData = {
         driver_name: data.driver,
         companions: data.companions || [],
         car: randomCar?.id || 'Desconhecido',
         pickup_date: dateToLocalString(data.pickupDate),
         return_date: dateToLocalString(data.returnDate),
         destinations: cleanDestinations,
+        driver_email: data.driverEmail || null,
+        odometer_start_km: data.odometerStartKm || null,
         // status será definido via default/trigger
-      });
+      };
+
+      const { data: newReservation, error } = await supabase
+        .from('reservations')
+        .insert(reservationData)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Enviar email de confirmação se tiver email
+      if (newReservation?.driver_email) {
+        try {
+          await sendReservationConfirmation(newReservation);
+        } catch (emailError) {
+          console.error('Error sending confirmation email:', emailError);
+          // Não falhar a reserva por causa do email
+        }
+      }
 
       toast({
         title: 'Reserva confirmada!',
@@ -304,6 +361,46 @@ const form = useForm<ReservationForm>({
               )}
             />
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="driverEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email do Condutor</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="email" 
+                        placeholder="email@empresa.com" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="odometerStartKm"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>KM na Retirada (opcional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="0"
+                        placeholder="Ex: 25000" 
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="companions"
@@ -341,6 +438,13 @@ const form = useForm<ReservationForm>({
                 </FormItem>
               )}
             />
+
+            {pendingKmWarning && (
+              <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/20 rounded-md">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <span className="text-sm text-warning-foreground">{pendingKmWarning}</span>
+              </div>
+            )}
 
             <Button 
               type="submit" 

@@ -7,21 +7,49 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
+      drivers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          km_reminder_last_sent_on: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          km_reminder_last_sent_on?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          km_reminder_last_sent_on?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
       reservations: {
         Row: {
           car: string
           companions: string[]
           created_at: string
           destinations: string[]
+          driver_email: string | null
           driver_name: string
+          email_sent_at: string | null
           id: string
+          odometer_end_km: number | null
+          odometer_start_km: number | null
           pickup_date: string
           return_date: string
           status: string
@@ -31,8 +59,12 @@ export type Database = {
           companions?: string[]
           created_at?: string
           destinations?: string[]
+          driver_email?: string | null
           driver_name: string
+          email_sent_at?: string | null
           id?: string
+          odometer_end_km?: number | null
+          odometer_start_km?: number | null
           pickup_date: string
           return_date: string
           status?: string
@@ -42,8 +74,12 @@ export type Database = {
           companions?: string[]
           created_at?: string
           destinations?: string[]
+          driver_email?: string | null
           driver_name?: string
+          email_sent_at?: string | null
           id?: string
+          odometer_end_km?: number | null
+          odometer_start_km?: number | null
           pickup_date?: string
           return_date?: string
           status?: string

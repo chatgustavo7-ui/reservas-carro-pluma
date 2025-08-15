@@ -1,0 +1,1 @@
+INSERT INTO drivers (name, email) VALUES ('Guilherme T.', 'guilherme.tamanho@belloalimentos.com.br') ON CONFLICT (name) DO UPDATE SET email = EXCLUDED.email;

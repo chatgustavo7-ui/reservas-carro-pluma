@@ -53,7 +53,6 @@ const reservationSchema = z.object({
   driver: z.string().min(1, 'Condutor é obrigatório'),
   companions: z.array(z.string()).optional(),
   driverEmail: z.string().email('Email inválido').optional().or(z.literal('')),
-  odometerStartKm: z.number().min(0, 'KM deve ser um número positivo').optional(),
 }).refine((data) => data.returnDate >= data.pickupDate, {
   message: 'Data de entrega deve ser igual ou posterior à data de retirada',
   path: ['returnDate'],
@@ -175,7 +174,6 @@ const form = useForm<ReservationForm>({
         return_date: dateToLocalString(data.returnDate),
         destinations: cleanDestinations,
         driver_email: data.driverEmail || null,
-        odometer_start_km: data.odometerStartKm || null,
         // status será definido via default/trigger
       };
 
@@ -361,45 +359,23 @@ const form = useForm<ReservationForm>({
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="driverEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email do Condutor</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="email" 
-                        placeholder="email@empresa.com" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="odometerStartKm"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>KM na Retirada (opcional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0"
-                        placeholder="Ex: 25000" 
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="driverEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email do Condutor</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="email" 
+                      placeholder="email@empresa.com" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

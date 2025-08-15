@@ -25,12 +25,9 @@ const Index = () => {
               Preencha os dados abaixo e nosso sistema selecionará automaticamente 
               o melhor veículo disponível para sua viagem.
             </p>
-            <div className="mt-4 space-x-4">
+            <div className="mt-4">
               <Button asChild>
                 <Link to="/reservas" aria-label="Ver todas as reservas">Ver reservas</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/condutores" aria-label="Gerenciar condutores">Condutores</Link>
               </Button>
             </div>
           </div>

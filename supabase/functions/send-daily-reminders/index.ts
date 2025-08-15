@@ -27,6 +27,14 @@ function todayISO(): string {
   return `${y}-${m}-${d}`;
 }
 
+// Função para verificar se é 18h (horário de Brasília)
+function isAutoFinalizationTime(): boolean {
+  const now = new Date();
+  const brasiliaOffset = -3; // UTC-3
+  const brasiliaHour = (now.getUTCHours() + brasiliaOffset + 24) % 24;
+  return brasiliaHour >= 18;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -35,7 +43,43 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const today = todayISO();
-    console.log(`Running daily reminders for date: ${today}`);
+    console.log(`Running daily reminders and auto-finalization for date: ${today}`);
+
+    // Finalização automática às 18h - reservas que deveriam ter sido devolvidas hoje
+    if (isAutoFinalizationTime()) {
+      console.log("Running auto-finalization for today's returns...");
+      
+      const { data: autoFinalizableReservations, error: autoError } = await supabase
+        .from('reservations')
+        .select('*')
+        .eq('return_date', today)
+        .eq('status', 'ativa')
+        .is('odometer_end_km', null);
+
+      if (autoError) {
+        console.error('Error fetching auto-finalizable reservations:', autoError);
+      } else if (autoFinalizableReservations?.length > 0) {
+        console.log(`Found ${autoFinalizableReservations.length} reservations to auto-finalize`);
+        
+        for (const reservation of autoFinalizableReservations) {
+          try {
+            // Finalizar automaticamente (status = concluída, mas KM fica null = pendente)
+            const { error: updateError } = await supabase
+              .from('reservations')
+              .update({ status: 'concluída' })
+              .eq('id', reservation.id);
+
+            if (updateError) {
+              console.error(`Error auto-finalizing reservation ${reservation.id}:`, updateError);
+            } else {
+              console.log(`Auto-finalized reservation ${reservation.id} for ${reservation.driver_name}`);
+            }
+          } catch (error) {
+            console.error(`Error processing auto-finalization for ${reservation.id}:`, error);
+          }
+        }
+      }
+    }
 
     // Buscar todos os condutores com pendências de KM
     const { data: pendingReservations, error: reservationsError } = await supabase

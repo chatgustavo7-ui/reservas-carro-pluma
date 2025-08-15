@@ -89,82 +89,77 @@ export async function sendReservationConfirmation(reservation: any) {
       return { success: false, error: 'No email provided' };
     }
 
-    const isSameDay = reservation.pickup_date === reservation.return_date;
-    
-    if (isSameDay) {
-      // Mesmo dia: enviar email com botão para finalizar
-      const html = `
-        <h2>Reserva Confirmada - Finalizar Viagem</h2>
-        <p>Olá <strong>${reservation.driver_name}</strong>,</p>
-        <p>Sua reserva <strong>#${reservation.id}</strong> foi confirmada para hoje.</p>
-        
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-          <p><strong>Data:</strong> ${formatDateBR(reservation.pickup_date)}</p>
-          <p><strong>Placa:</strong> ${reservation.car}</p>
-          <p><strong>Destinos:</strong> ${(reservation.destinations || []).join(', ')}</p>
-          ${reservation.companions?.length > 0 ? `<p><strong>Acompanhantes:</strong> ${reservation.companions.join(', ')}</p>` : ''}
-        </div>
-        
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="#" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Finalizar Viagem e Informar KM
-          </a>
-        </div>
-        
-        <p><strong>Importante:</strong> Clique no botão acima para finalizar a viagem e informar o KM final.</p>
-        
-        <hr style="margin: 20px 0;">
-        <p style="font-size: 12px; color: #666;">
-          Este é um email automático do sistema de reservas.
-        </p>
-      `;
+    // Sempre enviar email de confirmação
+    const confirmationHtml = `
+      <h2>Reserva Confirmada</h2>
+      <p>Olá <strong>${reservation.driver_name}</strong>,</p>
+      <p>Sua reserva <strong>#${reservation.id}</strong> foi confirmada com sucesso.</p>
+      
+      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p><strong>Período:</strong> ${formatDateBR(reservation.pickup_date)} até ${formatDateBR(reservation.return_date)}</p>
+        <p><strong>Placa:</strong> ${reservation.car}</p>
+        <p><strong>Destinos:</strong> ${(reservation.destinations || []).join(', ')}</p>
+        ${reservation.companions?.length > 0 ? `<p><strong>Acompanhantes:</strong> ${reservation.companions.join(', ')}</p>` : ''}
+      </div>
+      
+      <p><strong>Importante:</strong> No dia da devolução, você receberá um email para finalizar a viagem e informar o KM.</p>
+      
+      <hr style="margin: 20px 0;">
+      <p style="font-size: 12px; color: #666;">
+        Este é um email automático do sistema de reservas.
+      </p>
+    `;
 
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: reservation.driver_email,
-          subject: 'Reserva para hoje - Finalizar viagem',
-          html
-        }
-      });
+    // Sempre enviar email com botão de finalização
+    const finalizationHtml = `
+      <h2>Finalize sua Viagem</h2>
+      <p>Olá <strong>${reservation.driver_name}</strong>,</p>
+      <p>Use o botão abaixo para finalizar sua viagem <strong>#${reservation.id}</strong> e informar o KM final.</p>
+      
+      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p><strong>Período:</strong> ${formatDateBR(reservation.pickup_date)} até ${formatDateBR(reservation.return_date)}</p>
+        <p><strong>Placa:</strong> ${reservation.car}</p>
+        <p><strong>Destinos:</strong> ${(reservation.destinations || []).join(', ')}</p>
+      </div>
+      
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="#" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+          Finalizar Viagem e Informar KM
+        </a>
+      </div>
+      
+      <p><strong>Importante:</strong> A viagem será finalizada automaticamente às 18h do dia de entrega se não for finalizada manualmente.</p>
+      
+      <hr style="margin: 20px 0;">
+      <p style="font-size: 12px; color: #666;">
+        Este é um email automático do sistema de reservas.
+      </p>
+    `;
 
-      if (error) {
-        console.error('Error sending same-day email:', error);
-        return { success: false, error };
+    // Enviar email de confirmação
+    const { error: confirmationError } = await supabase.functions.invoke('send-email', {
+      body: {
+        to: reservation.driver_email,
+        subject: 'Reserva confirmada',
+        html: confirmationHtml
       }
-    } else {
-      // Dias diferentes: enviar email de confirmação sem botão
-      const html = `
-        <h2>Reserva Confirmada</h2>
-        <p>Olá <strong>${reservation.driver_name}</strong>,</p>
-        <p>Sua reserva <strong>#${reservation.id}</strong> foi confirmada com sucesso.</p>
-        
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-          <p><strong>Período:</strong> ${formatDateBR(reservation.pickup_date)} até ${formatDateBR(reservation.return_date)}</p>
-          <p><strong>Placa:</strong> ${reservation.car}</p>
-          <p><strong>Destinos:</strong> ${(reservation.destinations || []).join(', ')}</p>
-          ${reservation.companions?.length > 0 ? `<p><strong>Acompanhantes:</strong> ${reservation.companions.join(', ')}</p>` : ''}
-        </div>
-        
-        <p><strong>Importante:</strong> No dia da devolução (${formatDateBR(reservation.return_date)}), você receberá outro email para finalizar a viagem e informar o KM.</p>
-        
-        <hr style="margin: 20px 0;">
-        <p style="font-size: 12px; color: #666;">
-          Este é um email automático do sistema de reservas.
-        </p>
-      `;
+    });
 
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: reservation.driver_email,
-          subject: 'Reserva confirmada',
-          html
-        }
-      });
+    if (confirmationError) {
+      console.error('Error sending confirmation email:', confirmationError);
+    }
 
-      if (error) {
-        console.error('Error sending confirmation email:', error);
-        return { success: false, error };
+    // Enviar email de finalização
+    const { error: finalizationError } = await supabase.functions.invoke('send-email', {
+      body: {
+        to: reservation.driver_email,
+        subject: 'Finalizar viagem - Informar KM',
+        html: finalizationHtml
       }
+    });
+
+    if (finalizationError) {
+      console.error('Error sending finalization email:', finalizationError);
     }
 
     // Atualizar timestamp de envio do email

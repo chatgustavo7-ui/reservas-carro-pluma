@@ -19,5 +19,8 @@ security_update_password_require_reauthentication = true
 [functions.send-email]
 verify_jwt = false
 
+[functions.test-email]
+verify_jwt = false
+
 [functions.send-daily-reminders]
 verify_jwt = false

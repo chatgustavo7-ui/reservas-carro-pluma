@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CarReservationForm } from '@/components/CarReservationForm';
 import { PendingKmBanner } from '@/components/PendingKmBanner';
+import { EmailTest } from '@/components/EmailTest';
 const Index = () => {
   const [currentDriver, setCurrentDriver] = useState<string>('');
 
@@ -30,6 +31,12 @@ const Index = () => {
                 <Link to="/reservas" aria-label="Ver todas as reservas">Ver reservas</Link>
               </Button>
             </div>
+          </div>
+          
+          {/* Seção de Teste de Email */}
+          <div className="text-center mb-12">
+            <h3 className="text-xl font-semibold mb-4">Teste de Email</h3>
+            <EmailTest />
           </div>
           
           <CarReservationForm />

@@ -96,6 +96,7 @@ export const CarReservationForm = () => {
   const [selectedCar, setSelectedCar] = useState<typeof cars[0] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingKmWarning, setPendingKmWarning] = useState<string>('');
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
 
 const form = useForm<ReservationForm>({
   resolver: zodResolver(reservationSchema),
@@ -143,6 +144,49 @@ const form = useForm<ReservationForm>({
     checkDriverPendencies();
   }, [watchedDriver, form]);
 
+  const testEmail = async () => {
+    const driverEmail = form.getValues('driverEmail');
+    
+    if (!driverEmail) {
+      toast({
+        title: 'Email necessário',
+        description: 'Por favor, informe o email do condutor para testar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsTestingEmail(true);
+    try {
+      const testReservation = {
+        id: 'test-' + Date.now(),
+        driver_name: form.getValues('driver') || 'Teste',
+        driver_email: driverEmail,
+        car: 'TMA3I25',
+        pickup_date: new Date().toISOString().split('T')[0],
+        return_date: new Date().toISOString().split('T')[0],
+        destinations: ['Teste de Email'],
+        companions: [],
+        status: 'ativa'
+      };
+
+      await sendReservationConfirmation(testReservation);
+      toast({
+        title: 'Email de teste enviado!',
+        description: `Email de teste enviado para ${driverEmail}`,
+      });
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      toast({
+        title: 'Erro no teste',
+        description: 'Erro ao enviar email de teste. Verifique o email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
+
   const onSubmit = async (data: ReservationForm) => {
     setIsSubmitting(true);
 
@@ -185,14 +229,28 @@ const form = useForm<ReservationForm>({
 
       if (error) throw error;
 
-      // Enviar email de confirmação se tiver email
+      // Sempre enviar email de confirmação se tiver email
       if (newReservation?.driver_email) {
         try {
           await sendReservationConfirmation(newReservation);
+          toast({
+            title: 'Email enviado!',
+            description: 'Email de confirmação enviado com sucesso.',
+          });
         } catch (emailError) {
           console.error('Error sending confirmation email:', emailError);
-          // Não falhar a reserva por causa do email
+          toast({
+            title: 'Aviso',
+            description: 'Reserva criada, mas houve erro no envio do email.',
+            variant: 'destructive',
+          });
         }
+      } else {
+        toast({
+          title: 'Aviso',
+          description: 'Reserva criada, mas sem email do condutor.',
+          variant: 'destructive',
+        });
       }
 
       toast({
@@ -365,13 +423,23 @@ const form = useForm<ReservationForm>({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email do Condutor</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="email@empresa.com" 
-                      {...field} 
-                    />
-                  </FormControl>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input 
+                        type="email" 
+                        placeholder="email@empresa.com" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={testEmail}
+                      disabled={isTestingEmail || !field.value}
+                    >
+                      {isTestingEmail ? 'Testando...' : 'Testar Email'}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

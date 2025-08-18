@@ -9,9 +9,10 @@ import { DestinationAutocomplete } from '@/components/DestinationAutocomplete';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { ArrowLeft, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Trash2, AlertTriangle, Car } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { todayISO, formatDateBR } from '@/utils/kmUtils';
+import { todayISO, formatDateBR, saveEndKm } from '@/utils/kmUtils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const useReservations = (filters: {
   driver: string;
@@ -90,6 +91,10 @@ const Reservations: React.FC = () => {
   const [destination, setDestination] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
+  const [kmDialog, setKmDialog] = useState<{ open: boolean, reservation: any }>({ open: false, reservation: null });
+  const [startKm, setStartKm] = useState('');
+  const [endKm, setEndKm] = useState('');
+  const [isSavingKm, setIsSavingKm] = useState(false);
 
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useReservations({ driver, car, destination, start, end });
@@ -167,6 +172,75 @@ const Reservations: React.FC = () => {
   };
 
   const hasFilters = useMemo(() => driver || car || destination || start || end, [driver, car, destination, start, end]);
+
+  const openKmDialog = (reservation: any) => {
+    setKmDialog({ open: true, reservation });
+    setStartKm(reservation.odometer_start_km?.toString() || '');
+    setEndKm(reservation.odometer_end_km?.toString() || '');
+  };
+
+  const closeKmDialog = () => {
+    setKmDialog({ open: false, reservation: null });
+    setStartKm('');
+    setEndKm('');
+  };
+
+  const handleSaveKm = async () => {
+    if (!kmDialog.reservation) return;
+
+    const startKmNum = parseInt(startKm);
+    const endKmNum = parseInt(endKm);
+
+    if (isNaN(startKmNum) || isNaN(endKmNum)) {
+      toast({
+        title: 'Erro de validação',
+        description: 'Por favor, informe valores numéricos válidos para KM.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (endKmNum < startKmNum) {
+      toast({
+        title: 'Erro de validação',
+        description: 'KM final deve ser maior ou igual ao KM inicial.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingKm(true);
+    try {
+      // Atualizar ambos os KMs
+      const { error } = await supabase
+        .from('reservations')
+        .update({ 
+          odometer_start_km: startKmNum,
+          odometer_end_km: endKmNum,
+          status: 'concluída'
+        })
+        .eq('id', kmDialog.reservation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Viagem concluída!',
+        description: 'KMs salvos e viagem marcada como concluída.',
+      });
+
+      closeKmDialog();
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    } catch (error) {
+      console.error('Error saving KM:', error);
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Erro ao salvar os KMs. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingKm(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-background py-12">
@@ -263,56 +337,66 @@ const Reservations: React.FC = () => {
                              </div>
                            </TableCell>
                            <TableCell><StatusBadge status={r.status} /></TableCell>
-                           <TableCell>
-                             <div className="flex gap-2">
-                               {r.status === 'ativa' && (
-                                 <AlertDialog>
-                                   <AlertDialogTrigger asChild>
-                                     <Button variant="outline" size="sm">
-                                       <Trash2 className="h-4 w-4 mr-1" />
-                                       Cancelar
-                                     </Button>
-                                   </AlertDialogTrigger>
-                                   <AlertDialogContent>
-                                     <AlertDialogHeader>
-                                       <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
-                                       <AlertDialogDescription>
-                                         Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
-                                       </AlertDialogDescription>
-                                     </AlertDialogHeader>
-                                     <AlertDialogFooter>
-                                       <AlertDialogCancel>Não</AlertDialogCancel>
-                                       <AlertDialogAction onClick={() => handleCancelReservation(r.id)}>
-                                         Sim, cancelar
-                                       </AlertDialogAction>
-                                     </AlertDialogFooter>
-                                   </AlertDialogContent>
-                                 </AlertDialog>
-                               )}
-                               <AlertDialog>
-                                 <AlertDialogTrigger asChild>
-                                   <Button variant="destructive" size="sm">
-                                     <Trash2 className="h-4 w-4 mr-1" />
-                                     Remover
-                                   </Button>
-                                 </AlertDialogTrigger>
-                                 <AlertDialogContent>
-                                   <AlertDialogHeader>
-                                     <AlertDialogTitle>Remover Reserva</AlertDialogTitle>
-                                     <AlertDialogDescription>
-                                       Remover esta reserva? Esta ação é permanente e não pode ser desfeita.
-                                     </AlertDialogDescription>
-                                   </AlertDialogHeader>
-                                   <AlertDialogFooter>
-                                     <AlertDialogCancel>Não</AlertDialogCancel>
-                                     <AlertDialogAction onClick={() => handleRemoveReservation(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                       Sim, remover
-                                     </AlertDialogAction>
-                                   </AlertDialogFooter>
-                                 </AlertDialogContent>
-                               </AlertDialog>
-                             </div>
-                           </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                {(r.status === 'ativa' || r.status === 'concluída') && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => openKmDialog(r)}
+                                  >
+                                    <Car className="h-4 w-4 mr-1" />
+                                    {r.odometer_end_km ? 'Ver/Editar KM' : 'Concluir Viagem'}
+                                  </Button>
+                                )}
+                                {r.status === 'ativa' && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        <Trash2 className="h-4 w-4 mr-1" />
+                                        Cancelar
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Não</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleCancelReservation(r.id)}>
+                                          Sim, cancelar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm">
+                                      <Trash2 className="h-4 w-4 mr-1" />
+                                      Remover
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Remover Reserva</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Remover esta reserva? Esta ação é permanente e não pode ser desfeita.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Não</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleRemoveReservation(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                        Sim, remover
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
                         </TableRow>
                       ))
                      ) : (
@@ -327,6 +411,61 @@ const Reservations: React.FC = () => {
               </div>
             )}
           </section>
+
+          {/* Dialog para concluir viagem */}
+          <Dialog open={kmDialog.open} onOpenChange={closeKmDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Concluir Viagem</DialogTitle>
+                <DialogDescription>
+                  Informe os quilômetros para concluir a viagem de {kmDialog.reservation?.driver_name}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">KM Inicial</label>
+                  <Input
+                    type="number"
+                    value={startKm}
+                    onChange={(e) => setStartKm(e.target.value)}
+                    placeholder="Ex: 50000"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">KM Final</label>
+                  <Input
+                    type="number"
+                    value={endKm}
+                    onChange={(e) => setEndKm(e.target.value)}
+                    placeholder="Ex: 50150"
+                  />
+                </div>
+
+                {startKm && endKm && parseInt(endKm) > parseInt(startKm) && (
+                  <div className="bg-muted p-3 rounded-md">
+                    <p className="text-sm">
+                      <strong>Distância percorrida:</strong> {(parseInt(endKm) - parseInt(startKm)).toLocaleString()} km
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={closeKmDialog}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSaveKm} 
+                  disabled={isSavingKm || !startKm || !endKm}
+                >
+                  {isSavingKm ? 'Salvando...' : 'Concluir Viagem'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         </div>
       </section>
     </main>

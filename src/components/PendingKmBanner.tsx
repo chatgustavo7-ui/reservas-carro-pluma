@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
@@ -14,7 +14,7 @@ export const PendingKmBanner = ({ driverName }: PendingKmBannerProps) => {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const checkPendingKm = async () => {
+  const checkPendingKm = useCallback(async () => {
     if (!driverName) return;
     
     setLoading(true);
@@ -26,11 +26,11 @@ export const PendingKmBanner = ({ driverName }: PendingKmBannerProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [driverName]);
 
   useEffect(() => {
     checkPendingKm();
-  }, [driverName]);
+  }, [checkPendingKm]);
 
   const handleModalClose = () => {
     setShowModal(false);

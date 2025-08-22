@@ -18,7 +18,7 @@ const normalize = (text: string) =>
     .trim();
 
 export const MultiDestinationField: React.FC<MultiDestinationFieldProps> = ({ value, onChange }) => {
-  const destinations = Array.isArray(value) ? value : [];
+  const destinations = useMemo(() => Array.isArray(value) ? value : [], [value]);
 
   const dragIndex = useRef<number | null>(null);
 

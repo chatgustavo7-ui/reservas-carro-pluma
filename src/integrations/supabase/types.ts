@@ -48,8 +48,8 @@ export type Database = {
           driver_name: string
           email_sent_at: string | null
           id: string
-          odometer_end_km: number | null
-          odometer_start_km: number | null
+          end_km: number | null
+    start_km: number | null
           pickup_date: string
           return_date: string
           status: string
@@ -63,8 +63,8 @@ export type Database = {
           driver_name: string
           email_sent_at?: string | null
           id?: string
-          odometer_end_km?: number | null
-          odometer_start_km?: number | null
+          end_km?: number | null
+    start_km?: number | null
           pickup_date: string
           return_date: string
           status?: string
@@ -78,8 +78,8 @@ export type Database = {
           driver_name?: string
           email_sent_at?: string | null
           id?: string
-          odometer_end_km?: number | null
-          odometer_start_km?: number | null
+          end_km?: number | null
+    start_km?: number | null
           pickup_date?: string
           return_date?: string
           status?: string

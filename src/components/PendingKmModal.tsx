@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ interface PendingReservation {
   pickup_date: string;
   return_date: string;
   destinations: string[];
-  odometer_start_km?: number;
+  start_km?: number;
 }
 
 export const PendingKmModal = ({ isOpen, onClose, driverName }: PendingKmModalProps) => {
@@ -35,9 +35,9 @@ export const PendingKmModal = ({ isOpen, onClose, driverName }: PendingKmModalPr
     if (isOpen && driverName) {
       loadPendingReservations();
     }
-  }, [isOpen, driverName]);
+  }, [isOpen, driverName, loadPendingReservations]);
 
-  const loadPendingReservations = async () => {
+  const loadPendingReservations = useCallback(async () => {
     setLoading(true);
     try {
       const reservations = await getPendingReservations(driverName);
@@ -59,7 +59,7 @@ export const PendingKmModal = ({ isOpen, onClose, driverName }: PendingKmModalPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [driverName, toast]);
 
   const handleKmChange = (reservationId: string, value: string) => {
     setKmValues(prev => ({
@@ -76,8 +76,8 @@ export const PendingKmModal = ({ isOpen, onClose, driverName }: PendingKmModalPr
     }
 
     const reservation = pendingReservations.find(r => r.id === reservationId);
-    if (reservation?.odometer_start_km && km < reservation.odometer_start_km) {
-      return `O KM da devolução (${km}) não pode ser menor que o KM da retirada (${reservation.odometer_start_km})`;
+    if (reservation?.start_km && km < reservation.start_km) {
+      return `O KM da devolução (${km}) não pode ser menor que o KM da retirada (${reservation.start_km})`;
     }
 
     return null;
@@ -179,9 +179,9 @@ export const PendingKmModal = ({ isOpen, onClose, driverName }: PendingKmModalPr
                           <strong>Destinos:</strong> {reservation.destinations.join(', ')}
                         </div>
                         
-                        {reservation.odometer_start_km && (
+                        {reservation.start_km && (
                           <div className="text-sm">
-                            <strong>KM na retirada:</strong> {reservation.odometer_start_km.toLocaleString()}
+                            <strong>KM na retirada:</strong> {reservation.start_km.toLocaleString()}
                           </div>
                         )}
                         

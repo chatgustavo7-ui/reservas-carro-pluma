@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { withRetry } from '@/integrations/supabase/retryUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,20 +17,23 @@ const useDrivers = () => {
   return useQuery({
     queryKey: ['drivers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('*')
-        .order('name');
+      const result = await withRetry.select(() => 
+        supabase
+          .from('drivers')
+          .select('*')
+          .order('name', { ascending: true })
+      );
       
-      if (error) throw error;
-      return data;
+      if (result.error) throw result.error;
+      return result.data;
     },
+    retry: false
   });
 };
 
 const Drivers = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingDriver, setEditingDriver] = useState<any>(null);
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [formData, setFormData] = useState({ name: '', email: '' });
   
   const queryClient = useQueryClient();
@@ -70,7 +74,7 @@ const Drivers = () => {
         description: editingDriver ? 'Condutor atualizado com sucesso' : 'Condutor criado com sucesso',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro',
         description: error.message || 'Erro ao salvar condutor',
@@ -95,7 +99,7 @@ const Drivers = () => {
         description: 'Condutor removido com sucesso',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro',
         description: error.message || 'Erro ao remover condutor',
@@ -104,7 +108,7 @@ const Drivers = () => {
     },
   });
 
-  const handleOpenDialog = (driver?: any) => {
+  const handleOpenDialog = (driver?: Driver) => {
     if (driver) {
       setEditingDriver(driver);
       setFormData({ name: driver.name, email: driver.email });

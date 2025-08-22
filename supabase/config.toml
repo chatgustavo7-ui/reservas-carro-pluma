@@ -9,15 +9,15 @@ max_rows = 1000
 
 [auth]
 enabled = true
-port = 54324
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
-refresh_token_rotation_enabled = true
-security_update_password_require_reauthentication = true
 
 [functions.send-email]
 verify_jwt = false
 
 [functions.send-daily-reminders]
+verify_jwt = false
+
+[functions.send-maintenance-alerts]
 verify_jwt = false

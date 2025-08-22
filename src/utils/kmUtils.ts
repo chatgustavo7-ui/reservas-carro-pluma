@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { sendReservationConfirmationEmail } from '@/services/emailService';
+import type { ReservationConfirmationData } from '@/lib/email-templates';
 
 // Função para obter data atual no fuso America/Sao_Paulo
 export function todayISO(): string {
@@ -11,15 +13,15 @@ export function todayISO(): string {
 }
 
 // Verificar se um condutor tem pendências de KM
-export async function hasPendingKm(driverName: string): Promise<boolean> {
+export async function hasPendingKm(conductorName: string): Promise<boolean> {
   try {
     const isoToday = todayISO();
     const { data, error } = await supabase
       .from('reservations')
       .select('id')
-      .eq('driver_name', driverName)
+      .eq('driver_name', conductorName)
       .lt('return_date', isoToday)
-      .is('odometer_end_km', null);
+      .is('end_km', null);
     
     if (error) {
       console.error('Error checking pending KM:', error);
@@ -34,15 +36,15 @@ export async function hasPendingKm(driverName: string): Promise<boolean> {
 }
 
 // Buscar reservas pendentes de um condutor
-export async function getPendingReservations(driverName: string) {
+export async function getPendingReservations(conductorName: string) {
   try {
     const isoToday = todayISO();
     const { data, error } = await supabase
       .from('reservations')
       .select('*')
-      .eq('driver_name', driverName)
+      .eq('driver_name', conductorName)
       .lt('return_date', isoToday)
-      .is('odometer_end_km', null)
+      .is('end_km', null)
       .order('return_date', { ascending: false });
     
     if (error) {
@@ -62,7 +64,7 @@ export async function saveEndKm(reservationId: string, endKm: number) {
   try {
     const { data, error } = await supabase
       .from('reservations')
-      .update({ odometer_end_km: endKm })
+      .update({ end_km: endKm })
       .eq('id', reservationId)
       .select()
       .single();
@@ -81,85 +83,52 @@ export function formatDateBR(dateStr: string): string {
   return `${day}/${month}/${year}`;
 }
 
+// Interface para reserva
+interface ReservationData {
+  id: string;
+  driver_name: string;
+  conductor_email?: string;
+  pickup_date: string;
+  return_date: string;
+  car: string;
+  destinations?: string[];
+  companions?: string[];
+}
+
 // Enviar email de confirmação de reserva
-export async function sendReservationConfirmation(reservation: any) {
+export async function sendReservationConfirmation(reservation: ReservationData) {
   try {
-    if (!reservation.driver_email) {
-      console.log('No driver email, skipping confirmation');
+    if (!reservation.conductor_email) {
+      console.log('No conductor email, skipping confirmation');
       return { success: false, error: 'No email provided' };
     }
 
-    // Sempre enviar email de confirmação
-    const confirmationHtml = `
-      <h2>Reserva Confirmada</h2>
-      <p>Olá <strong>${reservation.driver_name}</strong>,</p>
-      <p>Sua reserva <strong>#${reservation.id}</strong> foi confirmada com sucesso.</p>
-      
-      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-        <p><strong>Período:</strong> ${formatDateBR(reservation.pickup_date)} até ${formatDateBR(reservation.return_date)}</p>
-        <p><strong>Placa:</strong> ${reservation.car}</p>
-        <p><strong>Destinos:</strong> ${(reservation.destinations || []).join(', ')}</p>
-        ${reservation.companions?.length > 0 ? `<p><strong>Acompanhantes:</strong> ${reservation.companions.join(', ')}</p>` : ''}
-      </div>
-      
-      <p><strong>Importante:</strong> No dia da devolução, você receberá um email para finalizar a viagem e informar o KM.</p>
-      
-      <hr style="margin: 20px 0;">
-      <p style="font-size: 12px; color: #666;">
-        Este é um email automático do sistema de reservas.
-      </p>
-    `;
+    // Buscar informações do carro
+    const { data: carData } = await supabase
+      .from('cars')
+      .select('model')
+      .eq('plate', reservation.car)
+      .single();
 
-    // Sempre enviar email com botão de finalização
-    const finalizationHtml = `
-      <h2>Finalize sua Viagem</h2>
-      <p>Olá <strong>${reservation.driver_name}</strong>,</p>
-      <p>Use o botão abaixo para finalizar sua viagem <strong>#${reservation.id}</strong> e informar o KM final.</p>
-      
-      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-        <p><strong>Período:</strong> ${formatDateBR(reservation.pickup_date)} até ${formatDateBR(reservation.return_date)}</p>
-        <p><strong>Placa:</strong> ${reservation.car}</p>
-        <p><strong>Destinos:</strong> ${(reservation.destinations || []).join(', ')}</p>
-      </div>
-      
-      <div style="text-align: center; margin: 20px 0;">
-        <a href="#" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-          Finalizar Viagem e Informar KM
-        </a>
-      </div>
-      
-      <p><strong>Importante:</strong> A viagem será finalizada automaticamente às 18h do dia de entrega se não for finalizada manualmente.</p>
-      
-      <hr style="margin: 20px 0;">
-      <p style="font-size: 12px; color: #666;">
-        Este é um email automático do sistema de reservas.
-      </p>
-    `;
+    // Preparar dados para o template de confirmação
+    const confirmationData: ReservationConfirmationData = {
+      conductorName: reservation.driver_name,
+      conductorEmail: reservation.conductor_email,
+      reservationId: reservation.id,
+      carModel: carData?.model || 'Volkswagen T-Cross',
+      carPlate: reservation.car,
+      startDate: formatDateBR(reservation.pickup_date),
+      endDate: formatDateBR(reservation.return_date),
+      destination: (reservation.destinations || []).join(', ') || 'Não informado',
+      companions: reservation.companions || []
+    };
 
-    // Enviar email de confirmação
-    const { error: confirmationError } = await supabase.functions.invoke('send-email', {
-      body: {
-        to: reservation.driver_email,
-        subject: 'Reserva confirmada',
-        html: confirmationHtml
-      }
-    });
+    // Enviar email de confirmação usando o novo serviço
+    const result = await sendReservationConfirmationEmail(confirmationData);
 
-    if (confirmationError) {
-      console.error('Error sending confirmation email:', confirmationError);
-    }
-
-    // Enviar email de finalização
-    const { error: finalizationError } = await supabase.functions.invoke('send-email', {
-      body: {
-        to: reservation.driver_email,
-        subject: 'Finalizar viagem - Informar KM',
-        html: finalizationHtml
-      }
-    });
-
-    if (finalizationError) {
-      console.error('Error sending finalization email:', finalizationError);
+    if (!result.success) {
+      console.error('Error sending confirmation email:', result.error);
+      return result;
     }
 
     // Atualizar timestamp de envio do email

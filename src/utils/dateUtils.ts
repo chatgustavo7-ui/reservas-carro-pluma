@@ -65,3 +65,74 @@ export function formatDateForDisplay(dateString: string): string {
   const [year, month, day] = dateString.split('-');
   return `${day}/${month}/${year}`;
 }
+
+/**
+ * Formata um objeto Date para exibição DD/MM/YYYY
+ */
+export function formatDateObjectForDisplay(date: Date): string {
+  if (!date) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Formata uma data ISO string para exibição DD/MM/YYYY
+ */
+export function formatISODateForDisplay(isoString: string): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  return formatDateObjectForDisplay(date);
+}
+
+/**
+ * Formata uma data com horário para exibição DD/MM/YYYY HH:mm
+ */
+export function formatDateTimeForDisplay(date: Date | string): string {
+  if (!date) return '';
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  const hours = String(dateObj.getHours()).padStart(2, '0');
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+/**
+ * Formata uma data para exibição relativa (hoje, ontem, etc.) em português
+ */
+export function formatRelativeDateForDisplay(date: Date | string): string {
+  if (!date) return '';
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const isToday = dateObj.toDateString() === today.toDateString();
+  const isYesterday = dateObj.toDateString() === yesterday.toDateString();
+  
+  if (isToday) return 'Hoje';
+  if (isYesterday) return 'Ontem';
+  
+  return formatDateObjectForDisplay(dateObj);
+}
+
+/**
+ * Formata uma string de data para exibição DD/MM/YYYY
+ * Aceita tanto formato YYYY-MM-DD quanto ISO string
+ */
+export function formatDateStringForDisplay(dateString: string): string {
+  if (!dateString) return '';
+  
+  // Se for uma ISO string completa, converter para Date primeiro
+  if (dateString.includes('T')) {
+    const date = new Date(dateString);
+    return formatDateObjectForDisplay(date);
+  }
+  
+  // Se for formato YYYY-MM-DD
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+}

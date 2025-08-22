@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { CarWithLastUse } from '@/hooks/useCarStatus';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Car, RotateCcw, Wrench, Droplets, AlertTriangle, CheckCircle } from 'lucide-react';
 

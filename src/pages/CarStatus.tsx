@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../integrations/supabase/client';
 import { withRetry } from '@/integrations/supabase/retryUtils';
 import { differenceInDays } from 'date-fns';
 import { ArrowLeft, Car, AlertTriangle, CheckCircle, Clock, Edit } from 'lucide-react';

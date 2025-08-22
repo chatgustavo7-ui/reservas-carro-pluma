@@ -17,7 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { MultiDestinationField } from '@/components/MultiDestinationField';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { sendReservationConfirmationEmail } from '@/services/emailService';
 import { logSupabaseError, supabaseHealth } from '@/integrations/supabase/supabaseHealth';

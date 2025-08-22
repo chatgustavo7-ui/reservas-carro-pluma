@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 import { sendReservationConfirmationEmail } from '@/services/emailService';
 import type { ReservationConfirmationData } from '@/lib/email-templates';
 

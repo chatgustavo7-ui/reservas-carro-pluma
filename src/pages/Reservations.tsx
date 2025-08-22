@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DestinationAutocomplete } from '@/components/DestinationAutocomplete';
 import KmModal from '@/components/KmModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../integrations/supabase/client';
 import { withRetry } from '@/integrations/supabase/retryUtils';
 
 import { ArrowLeft, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';

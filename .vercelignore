@@ -1,6 +1,28 @@
-node_modules
-build
-dist
-.git
-.trae
-.log
+# Supabase functions (Deno Edge Functions, not compatible with Vercel)
+supabase/
+
+# Development files
+.env.local
+.env.development
+.env.test
+
+# Documentation
+*.md
+README*
+
+# Lock files (using npm)
+bun.lockb
+yarn.lock
+pnpm-lock.yaml
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+.temp/
+tmp/

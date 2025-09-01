@@ -221,25 +221,40 @@ const DaysWithoutUseBadge: React.FC<{ days: number }> = ({ days }) => {
 };
 
 const MaintenanceBadge: React.FC<{ car: CarWithLastUse }> = ({ car }) => {
-  if (car.needs_maintenance) {
+  if (!car.current_km || !car.next_maintenance_km) return null;
+
+  const kmUntilMaintenance = car.next_maintenance_km - car.current_km;
+  const margin = (car as any).km_margin || 0;
+  const kmUntilMarginLimit = (car.next_maintenance_km + margin) - car.current_km;
+
+  // Se passou da margem, bloquear completamente
+  if (kmUntilMarginLimit <= 0) {
     return (
       <Badge variant="destructive" className="flex items-center gap-1">
         <AlertTriangle className="h-3 w-3" />
-        Manutenção necessária
+        Manutenção Vencida (Bloqueado)
       </Badge>
     );
   }
 
-  if (car.current_km) {
-    const kmUntilMaintenance = car.next_maintenance_km - car.current_km;
-    if (kmUntilMaintenance <= 1000) {
-      return (
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {kmUntilMaintenance.toLocaleString()} km para manutenção
-        </Badge>
-      );
-    }
+  // Se passou da manutenção mas ainda dentro da margem
+  if (kmUntilMaintenance <= 0 && kmUntilMarginLimit > 0) {
+    return (
+      <Badge variant="secondary" className="flex items-center gap-1">
+        <AlertTriangle className="h-3 w-3" />
+        Manutenção Vencida - Margem: {kmUntilMarginLimit.toLocaleString()} km
+      </Badge>
+    );
+  }
+
+  // Alerta de aproximação da manutenção
+  if (kmUntilMaintenance <= 1000) {
+    return (
+      <Badge variant="secondary" className="flex items-center gap-1">
+        <Clock className="h-3 w-3" />
+        {kmUntilMaintenance.toLocaleString()} km para manutenção
+      </Badge>
+    );
   }
 
   return null;
@@ -249,13 +264,25 @@ const RevisionBadge: React.FC<{ car: CarWithLastUse }> = ({ car }) => {
   if (!car.current_km || !car.next_revision_km) return null;
 
   const kmUntilRevision = car.next_revision_km - car.current_km;
+  const margin = (car as any).km_margin || 0;
+  const kmUntilMarginLimit = (car.next_revision_km + margin) - car.current_km;
 
-  // Revisão vencida
-  if (kmUntilRevision <= 0) {
+  // Se passou da margem, bloquear completamente
+  if (kmUntilMarginLimit <= 0) {
     return (
       <Badge variant="destructive" className="flex items-center gap-1">
         <AlertTriangle className="h-3 w-3" />
-        🔴 REVISÃO VENCIDA! {Math.abs(kmUntilRevision).toLocaleString()} km em atraso
+        🔴 REVISÃO BLOQUEADA! {Math.abs(kmUntilMarginLimit).toLocaleString()} km além da margem
+      </Badge>
+    );
+  }
+
+  // Se passou da revisão mas ainda dentro da margem
+  if (kmUntilRevision <= 0 && kmUntilMarginLimit > 0) {
+    return (
+      <Badge variant="secondary" className="flex items-center gap-1">
+        <AlertTriangle className="h-3 w-3" />
+        🟠 REVISÃO VENCIDA! {Math.abs(kmUntilRevision).toLocaleString()} km em atraso - Margem: {kmUntilMarginLimit.toLocaleString()} km
       </Badge>
     );
   }

@@ -133,14 +133,40 @@ const Status = () => {
       };
     }
     
-    // Verificar se precisa de manutenção
-    if (car.current_km) {
+    // Verificar status de manutenção com margem usando a view cars_maintenance_status
+    // Nota: Para uma implementação completa, seria ideal buscar da view cars_maintenance_status
+    // Por enquanto, mantemos a lógica existente mas considerando a margem se disponível
+    if (car.current_km && car.next_maintenance_km) {
       const kmUntilMaintenance = car.next_maintenance_km - car.current_km;
+      const margin = (car as any).km_margin || 0;
+      const kmUntilMarginLimit = (car.next_maintenance_km + margin) - car.current_km;
+      
+      // Se passou da margem, bloquear completamente
+      if (kmUntilMarginLimit <= 0) {
+        return {
+          status: 'maintenance_needed',
+          label: 'Manutenção Vencida (Bloqueado)',
+          color: 'bg-red-100 text-red-800',
+          icon: AlertTriangle
+        };
+      }
+      
+      // Se passou da revisão mas ainda dentro da margem
+      if (kmUntilMaintenance <= 0 && kmUntilMarginLimit > 0) {
+        return {
+          status: 'maintenance_needed',
+          label: `Revisão Vencida (${Math.abs(kmUntilMaintenance)} km) - Margem: ${kmUntilMarginLimit} km`,
+          color: 'bg-orange-100 text-orange-800',
+          icon: AlertTriangle
+        };
+      }
+      
+      // Alerta de aproximação da revisão
       if (kmUntilMaintenance <= 1000) {
         return {
           status: 'maintenance_needed',
-          label: kmUntilMaintenance <= 0 ? 'Manutenção Vencida' : `Manutenção em ${kmUntilMaintenance} km`,
-          color: 'bg-red-100 text-red-800',
+          label: `Manutenção em ${kmUntilMaintenance} km`,
+          color: 'bg-yellow-100 text-yellow-800',
           icon: AlertTriangle
         };
       }

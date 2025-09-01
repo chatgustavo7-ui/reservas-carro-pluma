@@ -3,15 +3,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { CarWithLastUse } from '@/hooks/useCarStatus';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Car, RotateCcw, Wrench, Droplets, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Car, Calendar, Gauge, AlertTriangle, CheckCircle, Clock, Wrench, Droplets, RotateCcw } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type CarWithLastUse = Database['public']['Tables']['cars']['Row'] & {
+  last_used_date?: string | null;
+};
 
 interface EditCarModalProps {
   car: CarWithLastUse | null;
@@ -38,6 +42,7 @@ export function EditCarModal({ car, isOpen, onClose }: EditCarModalProps) {
   const [lastRevisionKm, setLastRevisionKm] = useState('');
   const [nextRevisionKm, setNextRevisionKm] = useState('');
   const [nextMaintenanceKm, setNextMaintenanceKm] = useState('');
+  const [kmMargin, setKmMargin] = useState('');
   const [status, setStatus] = useState('');
   const [lastMaintenance, setLastMaintenance] = useState('');
   const [observations, setObservations] = useState('');
@@ -55,7 +60,8 @@ export function EditCarModal({ car, isOpen, onClose }: EditCarModalProps) {
       setLastRevisionKm(car.last_revision_km?.toString() || '');
       setNextRevisionKm(car.next_revision_km?.toString() || '');
       setNextMaintenanceKm(car.next_maintenance_km?.toString() || '');
-      setStatus(car.status || '');
+      setKmMargin((car as any).km_margin?.toString() || '2000');
+      setStatus(car.status || 'disponível');
       setLastMaintenance(car.last_maintenance || '');
       setObservations(car.observations || '');
     }
@@ -100,9 +106,10 @@ export function EditCarModal({ car, isOpen, onClose }: EditCarModalProps) {
     const newLastRevisionKm = validateNumericField(lastRevisionKm, 'Quilometragem da última revisão');
     const newNextRevisionKm = validateNumericField(nextRevisionKm, 'Próxima revisão');
     const newNextMaintenanceKm = validateNumericField(nextMaintenanceKm, 'Próxima manutenção');
+    const newKmMargin = validateNumericField(kmMargin, 'Margem de quilometragem');
     
     if (newKm === false || newYear === false || newLastRevisionKm === false || 
-        newNextRevisionKm === false || newNextMaintenanceKm === false) {
+        newNextRevisionKm === false || newNextMaintenanceKm === false || newKmMargin === false) {
       return;
     }
 
@@ -112,7 +119,33 @@ export function EditCarModal({ car, isOpen, onClose }: EditCarModalProps) {
       return;
     }
 
+    // Validação adicional do status
+    const validStatuses = ['disponível', 'em uso', 'manutenção', 'indisponível', 'lavar'];
+    const finalStatus = status.trim() || 'disponível';
+    if (!validStatuses.includes(finalStatus)) {
+      toast.error(`Status inválido: ${finalStatus}. Valores permitidos: ${validStatuses.join(', ')}`);
+      return;
+    }
+
     setIsLoading(true);
+
+    // Log de debug para identificar o problema
+    console.log('Dados sendo enviados para o Supabase:', {
+      plate: plate.trim(),
+      model: model.trim(),
+      brand: brand.trim(),
+      color: color.trim() || null,
+      year: newYear,
+      current_km: newKm,
+      last_revision_km: newLastRevisionKm,
+      next_revision_km: newNextRevisionKm,
+      next_maintenance_km: newNextMaintenanceKm,
+      km_margin: newKmMargin,
+      status: finalStatus,
+      last_maintenance: lastMaintenance || null,
+      observations: observations.trim() || null,
+      updated_at: new Date().toISOString()
+    });
 
     try {
       const { error } = await supabase
@@ -127,7 +160,8 @@ export function EditCarModal({ car, isOpen, onClose }: EditCarModalProps) {
           last_revision_km: newLastRevisionKm,
           next_revision_km: newNextRevisionKm,
           next_maintenance_km: newNextMaintenanceKm,
-          status,
+          km_margin: newKmMargin,
+          status: finalStatus,
           last_maintenance: lastMaintenance || null,
           observations: observations.trim() || null,
           updated_at: new Date().toISOString()
@@ -254,7 +288,8 @@ export function EditCarModal({ car, isOpen, onClose }: EditCarModalProps) {
       setLastRevisionKm(car.last_revision_km?.toString() || '');
       setNextRevisionKm(car.next_revision_km?.toString() || '');
       setNextMaintenanceKm(car.next_maintenance_km?.toString() || '');
-      setStatus(car.status || '');
+      setKmMargin((car as any).km_margin?.toString() || '2000');
+      setStatus(car.status || 'disponível');
       setLastMaintenance(car.last_maintenance || '');
       setObservations(car.observations || '');
     }
@@ -454,7 +489,21 @@ export function EditCarModal({ car, isOpen, onClose }: EditCarModalProps) {
                   min="0"
                 />
               </div>
-              <div className="space-y-2 col-span-2">
+              <div className="space-y-2">
+                <Label htmlFor="kmMargin">Margem de KM (km)</Label>
+                <Input
+                  id="kmMargin"
+                  type="number"
+                  value={kmMargin}
+                  onChange={(e) => setKmMargin(e.target.value)}
+                  placeholder="2000"
+                  min="0"
+                />
+                <p className="text-xs text-gray-500">
+                  Quilometragem adicional permitida após a revisão programada
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="lastMaintenance">Data da Última Manutenção</Label>
                 <Input
                   id="lastMaintenance"

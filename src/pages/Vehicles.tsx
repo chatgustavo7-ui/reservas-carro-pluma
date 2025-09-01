@@ -18,6 +18,10 @@ interface Vehicle {
   is_active: boolean;
   last_maintenance_km?: number;
   maintenance_interval_km?: number;
+  km_margin?: number;
+  can_use?: boolean;
+  maintenance_status?: string;
+  revision_status?: string;
   last_reservation?: {
     end_date: string;
     conductor_name: string;
@@ -28,9 +32,9 @@ const Vehicles = () => {
   const { data: vehicles, isLoading, error } = useQuery({
     queryKey: ['vehicles-info'],
     queryFn: async () => {
-      // First, get all cars
+      // First, get all cars with maintenance status
       const { data: carsData, error: carsError } = await supabase
-        .from('cars')
+        .from('cars_maintenance_status')
         .select(`
           id,
           model,
@@ -40,7 +44,11 @@ const Vehicles = () => {
           current_km,
           is_active,
           last_maintenance_km,
-          maintenance_interval_km
+          maintenance_interval_km,
+          km_margin,
+          can_use,
+          maintenance_status,
+          revision_status
         `)
         .order('model', { ascending: true });
 
@@ -76,19 +84,22 @@ const Vehicles = () => {
   });
 
   const getMaintenanceStatus = (vehicle: Vehicle) => {
-    if (!vehicle.last_maintenance_km || !vehicle.maintenance_interval_km) {
+    if (!vehicle.maintenance_status) {
       return { status: 'unknown', message: 'Dados de manutenção não disponíveis' };
     }
 
-    const kmSinceLastMaintenance = vehicle.current_km - vehicle.last_maintenance_km;
-    const kmUntilNextMaintenance = vehicle.maintenance_interval_km - kmSinceLastMaintenance;
-
-    if (kmUntilNextMaintenance <= 0) {
-      return { status: 'overdue', message: 'Manutenção em atraso' };
-    } else if (kmUntilNextMaintenance <= 1000) {
-      return { status: 'due-soon', message: `Próxima manutenção em ${kmUntilNextMaintenance.toLocaleString()} km` };
-    } else {
-      return { status: 'ok', message: `Próxima manutenção em ${kmUntilNextMaintenance.toLocaleString()} km` };
+    // Usar o status calculado pela view que considera a margem
+    switch (vehicle.maintenance_status) {
+      case 'overdue_blocked':
+        return { status: 'overdue', message: 'Manutenção vencida (Bloqueado)' };
+      case 'overdue_margin':
+        return { status: 'overdue-margin', message: 'Manutenção vencida - Dentro da margem' };
+      case 'due_soon':
+        return { status: 'due-soon', message: 'Manutenção próxima' };
+      case 'ok':
+        return { status: 'ok', message: 'Manutenção em dia' };
+      default:
+        return { status: 'unknown', message: 'Status desconhecido' };
     }
   };
 
@@ -102,9 +113,16 @@ const Vehicles = () => {
       return <Badge variant="destructive">Inativo</Badge>;
     }
 
+    // Verificar se o carro pode ser usado (considerando margem)
+    if (!vehicle.can_use) {
+      return <Badge variant="destructive">Bloqueado</Badge>;
+    }
+
     const maintenanceStatus = getMaintenanceStatus(vehicle);
     if (maintenanceStatus.status === 'overdue') {
       return <Badge variant="destructive">Manutenção Pendente</Badge>;
+    } else if (maintenanceStatus.status === 'overdue-margin') {
+      return <Badge variant="secondary">Manutenção Vencida - Margem</Badge>;
     } else if (maintenanceStatus.status === 'due-soon') {
       return <Badge variant="secondary">Manutenção Próxima</Badge>;
     }

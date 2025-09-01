@@ -7,84 +7,533 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
-  }
   public: {
     Tables: {
+      automation_logs: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          reservation_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          reservation_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          reservation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_status_logs: {
+        Row: {
+          action: string
+          details: string | null
+          error: string | null
+          executed_at: string | null
+          id: number
+        }
+        Insert: {
+          action: string
+          details?: string | null
+          error?: string | null
+          executed_at?: string | null
+          id?: number
+        }
+        Update: {
+          action?: string
+          details?: string | null
+          error?: string | null
+          executed_at?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
+      cars: {
+        Row: {
+          brand: string
+          color: string | null
+          created_at: string | null
+          current_km: number | null
+          id: string
+          km_margin: number
+          last_maintenance: string | null
+          last_revision_km: number
+          last_used_date: string | null
+          model: string
+          next_maintenance_km: number | null
+          next_revision_km: number
+          observations: string | null
+          plate: string
+          status: string | null
+          updated_at: string | null
+          year: number | null
+        }
+        Insert: {
+          brand?: string
+          color?: string | null
+          created_at?: string | null
+          current_km?: number | null
+          id?: string
+          km_margin?: number
+          last_maintenance?: string | null
+          last_revision_km?: number
+          last_used_date?: string | null
+          model?: string
+          next_maintenance_km?: number | null
+          next_revision_km?: number
+          observations?: string | null
+          plate: string
+          status?: string | null
+          updated_at?: string | null
+          year?: number | null
+        }
+        Update: {
+          brand?: string
+          color?: string | null
+          created_at?: string | null
+          current_km?: number | null
+          id?: string
+          km_margin?: number
+          last_maintenance?: string | null
+          last_revision_km?: number
+          last_used_date?: string | null
+          model?: string
+          next_maintenance_km?: number | null
+          next_revision_km?: number
+          observations?: string | null
+          plate?: string
+          status?: string | null
+          updated_at?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      conductors: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       drivers: {
         Row: {
           created_at: string
           email: string
           id: string
-          km_reminder_last_sent_on: string | null
+          km_reminder_last_sent_on: string
           name: string
         }
         Insert: {
           created_at?: string
           email: string
           id?: string
-          km_reminder_last_sent_on?: string | null
+          km_reminder_last_sent_on?: string
           name: string
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
-          km_reminder_last_sent_on?: string | null
+          km_reminder_last_sent_on?: string
           name?: string
         }
         Relationships: []
       }
+      km_records: {
+        Row: {
+          car_id: string
+          created_at: string | null
+          current_km: number
+          id: string
+          km_driven: number | null
+          previous_km: number
+          record_date: string
+          reservation_id: string | null
+        }
+        Insert: {
+          car_id: string
+          created_at?: string | null
+          current_km: number
+          id?: string
+          km_driven?: number | null
+          previous_km: number
+          record_date?: string
+          reservation_id?: string | null
+        }
+        Update: {
+          car_id?: string
+          created_at?: string | null
+          current_km?: number
+          id?: string
+          km_driven?: number | null
+          previous_km?: number
+          record_date?: string
+          reservation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "km_records_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "km_records_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_history: {
+        Row: {
+          car_id: string
+          cost: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          km_at_maintenance: number
+          maintenance_date: string
+          maintenance_type_id: string
+          next_due_date: string
+          next_due_km: number
+          notes: string | null
+          performed_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          car_id: string
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          km_at_maintenance: number
+          maintenance_date: string
+          maintenance_type_id: string
+          next_due_date: string
+          next_due_km: number
+          notes?: string | null
+          performed_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          car_id?: string
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          km_at_maintenance?: number
+          maintenance_date?: string
+          maintenance_type_id?: string
+          next_due_date?: string
+          next_due_km?: number
+          notes?: string | null
+          performed_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_history_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_history_maintenance_type_id_fkey"
+            columns: ["maintenance_type_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_records: {
+        Row: {
+          car_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          km_at_maintenance: number
+          maintenance_date: string
+          type: string
+        }
+        Insert: {
+          car_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          km_at_maintenance: number
+          maintenance_date: string
+          type: string
+        }
+        Update: {
+          car_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          km_at_maintenance?: number
+          maintenance_date?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_records_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_types: {
+        Row: {
+          category: string
+          created_at: string | null
+          default_km_interval: number | null
+          default_time_interval_months: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_km_interval: number | null
+          max_time_interval_months: number | null
+          min_km_interval: number | null
+          min_time_interval_months: number | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          default_km_interval?: number | null
+          default_time_interval_months?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_km_interval?: number | null
+          max_time_interval_months?: number | null
+          min_km_interval?: number | null
+          min_time_interval_months?: number | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          default_km_interval?: number | null
+          default_time_interval_months?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_km_interval?: number | null
+          max_time_interval_months?: number | null
+          min_km_interval?: number | null
+          min_time_interval_months?: number | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      reservation_companions: {
+        Row: {
+          conductor_id: string
+          created_at: string | null
+          id: string
+          reservation_id: string
+        }
+        Insert: {
+          conductor_id: string
+          created_at?: string | null
+          id?: string
+          reservation_id: string
+        }
+        Update: {
+          conductor_id?: string
+          created_at?: string | null
+          id?: string
+          reservation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservation_companions_conductor_id_fkey"
+            columns: ["conductor_id"]
+            isOneToOne: false
+            referencedRelation: "conductors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_companions_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reservations: {
         Row: {
           car: string
-          companions: string[]
-          created_at: string
-          destinations: string[]
-          driver_email: string | null
+          car_id: string
+          companions: string[] | null
+          conductor_id: string
+          created_at: string | null
+          destination: string
+          destinations: string[] | null
           driver_name: string
           email_sent_at: string | null
-          id: string
+          end_date: string
           end_km: number | null
-    start_km: number | null
+          id: string
+          km_informed: boolean | null
           pickup_date: string
           return_date: string
-          status: string
+          start_date: string
+          start_km: number | null
+          status: string | null
+          updated_at: string | null
         }
         Insert: {
           car: string
-          companions?: string[]
-          created_at?: string
-          destinations?: string[]
-          driver_email?: string | null
+          car_id: string
+          companions?: string[] | null
+          conductor_id: string
+          created_at?: string | null
+          destination: string
+          destinations?: string[] | null
           driver_name: string
           email_sent_at?: string | null
-          id?: string
+          end_date: string
           end_km?: number | null
-    start_km?: number | null
+          id?: string
+          km_informed?: boolean | null
           pickup_date: string
           return_date: string
-          status?: string
+          start_date: string
+          start_km?: number | null
+          status?: string | null
+          updated_at?: string | null
         }
         Update: {
           car?: string
-          companions?: string[]
-          created_at?: string
-          destinations?: string[]
-          driver_email?: string | null
+          car_id?: string
+          companions?: string[] | null
+          conductor_id?: string
+          created_at?: string | null
+          destination?: string
+          destinations?: string[] | null
           driver_name?: string
           email_sent_at?: string | null
-          id?: string
+          end_date?: string
           end_km?: number | null
-    start_km?: number | null
+          id?: string
+          km_informed?: boolean | null
           pickup_date?: string
           return_date?: string
-          status?: string
+          start_date?: string
+          start_km?: number | null
+          status?: string | null
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reservations_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_conductor_id_fkey"
+            columns: ["conductor_id"]
+            isOneToOne: false
+            referencedRelation: "conductors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_maintenance_config: {
+        Row: {
+          car_id: string
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          km_interval: number
+          maintenance_type_id: string
+          time_interval_months: number
+          updated_at: string | null
+        }
+        Insert: {
+          car_id: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          km_interval: number
+          maintenance_type_id: string
+          time_interval_months: number
+          updated_at?: string | null
+        }
+        Update: {
+          car_id?: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          km_interval?: number
+          maintenance_type_id?: string
+          time_interval_months?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_config_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_config_maintenance_type_id_fkey"
+            columns: ["maintenance_type_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -101,126 +550,3 @@ export type Database = {
     }
   }
 }
-
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const

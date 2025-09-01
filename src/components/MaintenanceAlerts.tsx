@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, X, Wrench, Info } from 'lucide-react';
+import { AlertTriangle, X, Wrench, Info, CheckCircle } from 'lucide-react';
 import { useMaintenanceAlerts } from '@/hooks/useMaintenanceAlerts';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface MaintenanceAlertsProps {
   className?: string;
@@ -12,7 +14,8 @@ interface MaintenanceAlertsProps {
 }
 
 export function MaintenanceAlerts({ className, showDismissButton = true }: MaintenanceAlertsProps) {
-  const { alerts, loading, dismissAlert, getCriticalAlertsCount, getWarningAlertsCount } = useMaintenanceAlerts();
+  const { alerts, loading, dismissAlert, getCriticalAlertsCount, getWarningAlertsCount, checkMaintenanceAlerts } = useMaintenanceAlerts();
+  const [confirmingRevision, setConfirmingRevision] = useState<string | null>(null);
 
   if (loading || alerts.length === 0) {
     return null;
@@ -54,6 +57,71 @@ export function MaintenanceAlerts({ className, showDismissButton = true }: Maint
         return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
       default:
         return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+    }
+  };
+
+  const handleConfirmRevision = async (alert: any) => {
+    setConfirmingRevision(alert.carId);
+    
+    try {
+      // Buscar o ID do tipo de manutenção 'revisão'
+      const { data: maintenanceTypes, error: typeError } = await supabase
+        .from('maintenance_types')
+        .select('id')
+        .eq('name', 'Revisão')
+        .single();
+
+      if (typeError || !maintenanceTypes) {
+        throw new Error('Tipo de manutenção "Revisão" não encontrado');
+      }
+
+      const currentDate = new Date().toISOString().split('T')[0];
+      const nextDueKm = alert.currentKm + 10000; // Próxima revisão em 10.000 km
+      const nextDueDate = new Date();
+      nextDueDate.setMonth(nextDueDate.getMonth() + 6); // Próxima revisão em 6 meses
+
+      // Registrar na tabela maintenance_history
+      const { error: historyError } = await supabase
+        .from('maintenance_history')
+        .insert({
+          car_id: alert.carId,
+          maintenance_type_id: maintenanceTypes.id,
+          maintenance_date: currentDate,
+          km_at_maintenance: alert.currentKm,
+          next_due_km: nextDueKm,
+          next_due_date: nextDueDate.toISOString().split('T')[0],
+          performed_by: 'Sistema',
+          notes: 'Revisão confirmada pelo sistema',
+          description: 'Revisão geral do veículo'
+        });
+
+      if (historyError) {
+        throw historyError;
+      }
+
+      // Atualizar last_revision_date do carro
+      const { error: carError } = await supabase
+        .from('cars')
+        .update({
+          last_revision_date: currentDate,
+          last_revision_km: alert.currentKm
+        })
+        .eq('id', alert.carId);
+
+      if (carError) {
+        throw carError;
+      }
+
+      toast.success('Revisão confirmada com sucesso!');
+      
+      // Recarregar alertas
+      await checkMaintenanceAlerts();
+      
+    } catch (error) {
+      console.error('Erro ao confirmar revisão:', error);
+      toast.error('Erro ao confirmar revisão: ' + (error as Error).message);
+    } finally {
+      setConfirmingRevision(null);
     }
   };
 
@@ -107,16 +175,31 @@ export function MaintenanceAlerts({ className, showDismissButton = true }: Maint
               </div>
             </div>
             
-            {showDismissButton && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0 h-6 w-6 p-0 hover:bg-black/10"
-                onClick={() => dismissAlert(alert.carId)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
+            <div className="flex flex-col gap-2">
+              {/* Botão Confirmar Revisão - apenas para alertas de revisão */}
+              {alert.type === 'revision' && (
+                <Button
+                  onClick={() => handleConfirmRevision(alert)}
+                  disabled={confirmingRevision === alert.carId}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1"
+                >
+                  <CheckCircle className="h-3 w-3" />
+                  {confirmingRevision === alert.carId ? 'Confirmando...' : 'Confirmar Revisão'}
+                </Button>
+              )}
+              
+              {showDismissButton && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0 h-6 w-6 p-0 hover:bg-black/10"
+                  onClick={() => dismissAlert(alert.carId)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </div>
         </Alert>
       ))}

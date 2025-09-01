@@ -110,10 +110,12 @@ const getAvailableCars = async (startDate: string, endDate: string) => {
 // Função de fallback tradicional
 const getAvailableCarsTraditional = async (startDate: string, endDate: string) => {
   try {
+    // Buscar carros usando a view que considera a margem de quilometragem
     const { data: cars, error } = await supabase
-      .from('cars')
+      .from('cars_maintenance_status')
       .select('*')
-      .eq('status', 'disponível');
+      .eq('status', 'disponível')
+      .eq('can_use', true); // Só carros que podem ser usados considerando a margem
     
     if (error) throw error;
     
@@ -133,6 +135,7 @@ const getAvailableCarsTraditional = async (startDate: string, endDate: string) =
       }
     }
     
+    console.log(`✅ Carros disponíveis (método tradicional com margem): ${availableCars.length}`);
     return availableCars;
   } catch (error) {
     console.error('Erro no método tradicional:', error);

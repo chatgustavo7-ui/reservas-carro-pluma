@@ -16,7 +16,9 @@ import { toast } from 'sonner';
 import { Car, User, Settings, Plus, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Mail } from 'lucide-react';
 import { formatDateTimeForDisplay, formatDateObjectForDisplay } from '@/utils/dateUtils';
 import { MaintenanceAlerts } from '@/components/MaintenanceAlerts';
-import { MaintenanceAlertsPanel } from '@/components/MaintenanceAlertsPanel';
+import MaintenanceAlertsPanel from '@/components/MaintenanceAlertsPanel';
+import MaintenanceConfigAdmin from '@/components/MaintenanceConfigAdmin';
+import MaintenanceHistoryTracker from '@/components/MaintenanceHistoryTracker';
 
 interface Car {
   id: string;
@@ -302,7 +304,7 @@ const Admin = () => {
         <MaintenanceAlertsPanel className="mb-6" />
 
         <Tabs defaultValue="cars" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="cars" className="flex items-center gap-2">
               <Car className="h-4 w-4" />
               Carros
@@ -323,6 +325,14 @@ const Admin = () => {
             <TabsTrigger value="maintenance" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Manutenção
+            </TabsTrigger>
+            <TabsTrigger value="maintenance-config" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Config. Manutenção
+            </TabsTrigger>
+            <TabsTrigger value="maintenance-history" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Histórico
             </TabsTrigger>
           </TabsList>
 
@@ -554,6 +564,14 @@ const Admin = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="maintenance-config">
+            <MaintenanceConfigAdmin />
+          </TabsContent>
+
+          <TabsContent value="maintenance-history">
+            <MaintenanceHistoryTracker />
           </TabsContent>
         </Tabs>
 

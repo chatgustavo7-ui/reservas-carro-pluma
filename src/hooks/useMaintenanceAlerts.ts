@@ -54,7 +54,7 @@ export function useMaintenanceAlerts() {
         const kmUntilMaintenance = car.next_maintenance_km - car.current_km;
         const kmUntilRevision = car.km_to_revision;
         
-        // Verificar alertas de REVISÃO (baseado em quilometragem)
+        // Verificar alertas de REVISÃO (baseado em quilometragem com margem)
         if (car.maintenance_status === 'REVISÃO_VENCIDA') {
           newAlerts.push({
             carId: car.id,
@@ -67,9 +67,9 @@ export function useMaintenanceAlerts() {
             kmUntilRevision,
             severity: 'critical',
             type: 'revision',
-            message: `🔴 REVISÃO VENCIDA! ${Math.abs(kmUntilRevision).toLocaleString()} km em atraso`
+            message: `🔴 REVISÃO VENCIDA! Veículo bloqueado - ${Math.abs(kmUntilRevision).toLocaleString()} km além da margem`
           });
-        } else if (car.maintenance_status === 'REVISÃO_URGENTE') {
+        } else if (car.maintenance_status === 'REVISÃO_VENCIDA_MARGEM') {
           newAlerts.push({
             carId: car.id,
             carModel: car.model,
@@ -79,9 +79,9 @@ export function useMaintenanceAlerts() {
             nextRevisionKm: car.next_revision_km,
             kmUntilMaintenance,
             kmUntilRevision,
-            severity: 'critical',
+            severity: 'warning',
             type: 'revision',
-            message: `🟠 REVISÃO URGENTE! Faltam apenas ${kmUntilRevision.toLocaleString()} km`
+            message: `🟠 ATENÇÃO! Usando margem de segurança - ${Math.abs(kmUntilRevision).toLocaleString()} km após revisão`
           });
         } else if (car.maintenance_status === 'REVISÃO_PRÓXIMA') {
           newAlerts.push({
@@ -96,6 +96,20 @@ export function useMaintenanceAlerts() {
             severity: 'warning',
             type: 'revision',
             message: `🟡 Revisão próxima em ${kmUntilRevision.toLocaleString()} km`
+          });
+        } else if (car.maintenance_status === 'REVISÃO_APROXIMANDO') {
+          newAlerts.push({
+            carId: car.id,
+            carModel: car.model,
+            carPlate: car.plate,
+            currentKm: car.current_km,
+            nextMaintenanceKm: car.next_maintenance_km,
+            nextRevisionKm: car.next_revision_km,
+            kmUntilMaintenance,
+            kmUntilRevision,
+            severity: 'info',
+            type: 'revision',
+            message: `ℹ️ Revisão se aproximando em ${kmUntilRevision.toLocaleString()} km`
           });
         }
 

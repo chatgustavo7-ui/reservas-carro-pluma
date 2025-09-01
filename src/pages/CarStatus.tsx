@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { differenceInDays } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../integrations/supabase/client';
-import { withRetry } from '@/integrations/supabase/retryUtils';
-import { differenceInDays } from 'date-fns';
 import { ArrowLeft, Car, AlertTriangle, CheckCircle, Clock, Edit } from 'lucide-react';
 import { formatDateStringForDisplay } from '@/utils/dateUtils';
 import { EditCarModal } from '@/components/EditCarModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { withRetry } from '@/integrations/supabase/retryUtils';
 
 interface CarWithLastUse {
   id: string;
@@ -316,6 +317,7 @@ const CarStatus: React.FC = () => {
   const [status, setStatus] = useState('');
   const [editingCar, setEditingCar] = useState<CarWithLastUse | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [confirmingRevision, setConfirmingRevision] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useCarStatus({ model, plate, status });
 
@@ -347,6 +349,82 @@ const CarStatus: React.FC = () => {
   const handleCloseEditModal = () => {
     setEditingCar(null);
     setIsEditModalOpen(false);
+  };
+
+  const handleConfirmRevision = async (car: CarWithLastUse) => {
+    setConfirmingRevision(car.id);
+    
+    try {
+      // Buscar o ID do tipo de manutenção 'revisão'
+      const { data: maintenanceTypes, error: typeError } = await supabase
+        .from('maintenance_types')
+        .select('id')
+        .eq('name', 'Revisão')
+        .single();
+
+      if (typeError || !maintenanceTypes) {
+        throw new Error('Tipo de manutenção "Revisão" não encontrado');
+      }
+
+      const currentDate = new Date().toISOString().split('T')[0];
+      const nextDueKm = car.current_km + 10000; // Próxima revisão em 10.000 km
+      const nextDueDate = new Date();
+      nextDueDate.setMonth(nextDueDate.getMonth() + 6); // Próxima revisão em 6 meses
+
+      // Registrar na tabela maintenance_history
+      const { error: historyError } = await supabase
+        .from('maintenance_history')
+        .insert({
+          car_id: car.id,
+          maintenance_type_id: maintenanceTypes.id,
+          maintenance_date: currentDate,
+          km_at_maintenance: car.current_km,
+          next_due_km: nextDueKm,
+          next_due_date: nextDueDate.toISOString().split('T')[0],
+          performed_by: 'Sistema',
+          notes: 'Revisão confirmada pelo sistema',
+          description: 'Revisão geral do veículo'
+        });
+
+      if (historyError) {
+        throw historyError;
+      }
+
+      // Atualizar last_revision_date do carro
+      const { error: carError } = await supabase
+        .from('cars')
+        .update({
+          last_revision_date: currentDate,
+          last_revision_km: car.current_km
+        })
+        .eq('id', car.id);
+
+      if (carError) {
+        throw carError;
+      }
+
+      toast.success('Revisão confirmada com sucesso!');
+      
+      // Recarregar dados
+      refetch();
+      
+    } catch (error) {
+      console.error('Erro ao confirmar revisão:', error);
+      toast.error('Erro ao confirmar revisão: ' + (error as Error).message);
+    } finally {
+      setConfirmingRevision(null);
+    }
+  };
+
+  const shouldShowConfirmRevisionButton = (car: CarWithLastUse) => {
+    if (!car.current_km || !car.next_revision_km) return false;
+    
+    const kmUntilRevision = car.next_revision_km - car.current_km;
+    const margin = (car as any).km_margin || 0;
+    const kmUntilMarginLimit = (car.next_revision_km + margin) - car.current_km;
+    
+    // Mostrar botão se passou da revisão ou está próximo (menos de 1000 km)
+    return kmUntilRevision <= 1000 || kmUntilMarginLimit <= 0;
   };
 
   const hasFilters = useMemo(() => model || plate || status, [model, plate, status]);
@@ -487,15 +565,29 @@ const CarStatus: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleEditCar(car)}
-                              className="flex items-center gap-1"
-                            >
-                              <Edit className="h-4 w-4" />
-                              Editar
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleEditCar(car)}
+                                className="flex items-center gap-1"
+                              >
+                                <Edit className="h-4 w-4" />
+                                Editar
+                              </Button>
+                              
+                              {shouldShowConfirmRevisionButton(car) && (
+                                <Button
+                                  onClick={() => handleConfirmRevision(car)}
+                                  disabled={confirmingRevision === car.id}
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1"
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                  {confirmingRevision === car.id ? 'Confirmando...' : 'Confirmar Revisão'}
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))

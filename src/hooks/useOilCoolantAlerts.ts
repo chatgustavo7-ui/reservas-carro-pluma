@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../integrations/supabase/client';
 
 export interface MaintenanceAlert {
   car_id: string;
@@ -67,64 +66,98 @@ export const useOilCoolantAlerts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Buscar alertas de manutenção
+  // Buscar alertas de manutenção - MOCK
   const fetchMaintenanceAlerts = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('vehicle_maintenance_status')
-        .select('*')
-        .order('overall_status', { ascending: false })
-        .order('plate');
-
-      if (error) throw error;
-      setAlerts(data || []);
-    } catch (err) {
-      console.error('Erro ao buscar alertas de manutenção:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const mockData: MaintenanceAlert[] = [
+      {
+        car_id: '1',
+        plate: 'ABC-1234',
+        model: 'Fiat Argo',
+        brand: 'Fiat',
+        current_km: 15500,
+        maintenance_type_id: 'oil-1',
+        maintenance_type: 'Troca de Óleo',
+        category: 'oil',
+        km_interval: 10000,
+        time_interval_months: 12,
+        last_maintenance_date: '2024-06-01',
+        last_maintenance_km: 10000,
+        next_due_km: 20000,
+        next_due_date: '2025-06-01',
+        km_until_due: 4500,
+        calculated_next_due_date: '2025-06-01',
+        km_status: 'OK_KM',
+        time_status: 'OK_TEMPO',
+        overall_status: 'OK'
+      },
+      {
+        car_id: '2',
+        plate: 'DEF-5678',
+        model: 'Chevrolet Onix',
+        brand: 'Chevrolet',
+        current_km: 31000,
+        maintenance_type_id: 'oil-2',
+        maintenance_type: 'Troca de Óleo',
+        category: 'oil',
+        km_interval: 10000,
+        time_interval_months: 12,
+        last_maintenance_date: '2024-01-15',
+        last_maintenance_km: 21000,
+        next_due_km: 31000,
+        next_due_date: '2025-01-15',
+        km_until_due: 0,
+        calculated_next_due_date: '2025-01-15',
+        km_status: 'URGENTE_KM',
+        time_status: 'OK_TEMPO',
+        overall_status: 'URGENTE'
+      }
+    ];
+    setAlerts(mockData);
+    setLoading(false);
   };
 
-  // Buscar tipos de manutenção
+  // Buscar tipos de manutenção - MOCK
   const fetchMaintenanceTypes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('maintenance_types')
-        .select('*')
-        .eq('is_active', true)
-        .order('category')
-        .order('name');
-
-      if (error) throw error;
-      setMaintenanceTypes(data || []);
-    } catch (err) {
-      console.error('Erro ao buscar tipos de manutenção:', err);
-    }
+    const mockTypes: MaintenanceType[] = [
+      {
+        id: 'oil-1',
+        name: 'Troca de Óleo',
+        description: 'Troca de óleo do motor',
+        category: 'oil',
+        default_km_interval: 10000,
+        default_time_interval_months: 12,
+        min_km_interval: 5000,
+        max_km_interval: 15000,
+        min_time_interval_months: 6,
+        max_time_interval_months: 24,
+        is_active: true
+      },
+      {
+        id: 'coolant-1',
+        name: 'Troca de Líquido de Arrefecimento',
+        description: 'Troca do líquido de arrefecimento',
+        category: 'coolant',
+        default_km_interval: 40000,
+        default_time_interval_months: 24,
+        min_km_interval: 30000,
+        max_km_interval: 60000,
+        min_time_interval_months: 18,
+        max_time_interval_months: 36,
+        is_active: true
+      }
+    ];
+    setMaintenanceTypes(mockTypes);
   };
 
-  // Buscar configuração de manutenção de um veículo
+  // Buscar configuração de manutenção de um veículo - MOCK
   const getVehicleMaintenanceConfig = async (carId: string): Promise<VehicleMaintenanceConfig[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('vehicle_maintenance_config')
-        .select(`
-          *,
-          maintenance_types!inner(*)
-        `)
-        .eq('car_id', carId)
-        .eq('maintenance_types.is_active', true);
-
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error('Erro ao buscar configuração de manutenção:', err);
-      return [];
-    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return [];
   };
 
-  // Atualizar configuração de manutenção
+  // Atualizar configuração de manutenção - MOCK
   const updateMaintenanceConfig = async (
     carId: string,
     maintenanceTypeId: string,
@@ -132,30 +165,12 @@ export const useOilCoolantAlerts = () => {
     timeIntervalMonths: number,
     isEnabled: boolean = true
   ) => {
-    try {
-      const { error } = await supabase
-        .from('vehicle_maintenance_config')
-        .upsert({
-          car_id: carId,
-          maintenance_type_id: maintenanceTypeId,
-          km_interval: kmInterval,
-          time_interval_months: timeIntervalMonths,
-          is_enabled: isEnabled,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-      
-      // Recarregar alertas
-      await fetchMaintenanceAlerts();
-      return true;
-    } catch (err) {
-      console.error('Erro ao atualizar configuração:', err);
-      throw err;
-    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await fetchMaintenanceAlerts();
+    return true;
   };
 
-  // Registrar manutenção realizada
+  // Registrar manutenção realizada - MOCK
   const registerMaintenance = async (
     carId: string,
     maintenanceTypeId: string,
@@ -166,57 +181,15 @@ export const useOilCoolantAlerts = () => {
     performedBy?: string,
     notes?: string
   ) => {
-    try {
-      const { data, error } = await supabase.rpc('register_maintenance', {
-        p_car_id: carId,
-        p_maintenance_type_id: maintenanceTypeId,
-        p_maintenance_date: maintenanceDate,
-        p_km_at_maintenance: kmAtMaintenance,
-        p_description: description,
-        p_cost: cost,
-        p_performed_by: performedBy,
-        p_notes: notes
-      });
-
-      if (error) throw error;
-      
-      // Recarregar alertas
-      await fetchMaintenanceAlerts();
-      return data;
-    } catch (err) {
-      console.error('Erro ao registrar manutenção:', err);
-      throw err;
-    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await fetchMaintenanceAlerts();
+    return { success: true };
   };
 
-  // Buscar histórico de manutenção
+  // Buscar histórico de manutenção - MOCK
   const getMaintenanceHistory = async (carId?: string, maintenanceTypeId?: string): Promise<MaintenanceHistory[]> => {
-    try {
-      let query = supabase
-        .from('maintenance_history')
-        .select(`
-          *,
-          cars!inner(plate, model, brand),
-          maintenance_types!inner(name, category)
-        `)
-        .order('maintenance_date', { ascending: false });
-
-      if (carId) {
-        query = query.eq('car_id', carId);
-      }
-
-      if (maintenanceTypeId) {
-        query = query.eq('maintenance_type_id', maintenanceTypeId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      return data || [];
-    } catch (err) {
-      console.error('Erro ao buscar histórico:', err);
-      return [];
-    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return [];
   };
 
   // Filtrar alertas por status
